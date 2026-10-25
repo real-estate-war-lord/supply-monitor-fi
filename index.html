@@ -73,6 +73,7 @@ main{overflow:auto;display:flex;flex-direction:column;min-width:0}
 .crumb{font:600 17px var(--disp);min-width:180px;flex:1}
 .crumb small{display:block;font:400 11px var(--mono);color:var(--muted);letter-spacing:.02em}
 .ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ctl[hidden]{display:none}
 .ctl input,.ctl select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 10px}
 .ctl input.q{min-width:320px}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;cursor:pointer;white-space:nowrap}
@@ -210,7 +211,7 @@ dialog .df{padding:12px 16px;border-top:1px solid var(--line2);display:flex;gap:
     <div class="brand">SUPPLY MONITOR FI<small>Rakennushankkeet, kaavat ja asuntotarjonta kohteiden ympärillä · julkinen data</small></div>
     <div class="navlabel">Seuranta</div>
     <nav class="nav">
-      <a data-view="portfolio" class="on">Portfolio <span class="cnt" id="n-portfolio"></span></a>
+      <a data-view="portfolio" class="on" title="Luku = hankkeet, jotka valmistuvat alle 6 kk päähän jostain kohteesta">Portfolio <span class="cnt" id="n-portfolio"></span></a>
       <a data-view="kohde">Kohde <span class="cnt" id="n-kohde"></span></a>
       <a data-view="haku">Haku</a>
     </nav>
@@ -224,7 +225,7 @@ dialog .df{padding:12px 16px;border-top:1px solid var(--line2);display:flex;gap:
       </select>
       <button class="side-btn" id="refresh" title="Ohita välimuisti ja hae kaikki data uudelleen">↻ Päivitä data</button>
       <button class="side-btn" id="about-btn">ⓘ Lähteet ja menetelmä</button>
-      <div class="build">v2.0 · 25.10.2026 · data haetaan ajon aikana</div>
+      <div class="build">v2.1 · 25.10.2026 · data haetaan ajon aikana</div>
     </div>
   </aside>
 
@@ -361,6 +362,7 @@ dialog .df{padding:12px 16px;border-top:1px solid var(--line2);display:flex;gap:
               <li><b>Tarjonta</b> = uudisrakennukset, joiden käyttötarkoitus on kerrostalo tai pientalo ja huoneistoja on yli 0. Laajennukset näkyvät listassa, mutta niitä ei lasketa mukaan. Muutostyöt on rajattu pois.</li>
               <li><b>Valmistumisarvio:</b> Rakenteilla olevalle hankkeelle aloitus + kunnan mediaanirakennusaika. Luvitetulle hankkeelle lupapäätös + kunnan mediaaniviive + rakennusaika, painotettuna kunnan toteutumisasteella (3–6 v sitten luvitetuista asunnoista aloitettu osuus). Yli 48 kk vanhat aloittamattomat luvat ovat epävarmoja, eikä niitä lasketa mukaan.</li>
               <li><b>Paikallinen tarjonta vs. kysyntä:</b> Tarjonta = seuraavan 36 kk valmistumiset vuodessa / nykyinen asuntokanta säteellä. Kysyntä = postinumeroalueen talouksien määrän kasvu vuodessa 2019→2024 (Paavo). Suhde 2× tarkoittaa, että lähialueen asuntokanta kasvaa kaksi kertaa niin nopeasti kuin alueen taloudet ovat lisääntyneet.</li>
+              <li><b>Imeytyminen:</b> postinumeroalueen talouksien lisäys jaettuna asuntojen lisäyksellä 2019→2024. Mittari kertoo, täyttyikö viime vuosien uusi tarjonta. Jos imeytyminen on alle 60 %, paineen pisteitä korotetaan 25 %. Huomaa, että uusilla alueilla talouksien kasvu johtuu itse uudesta tarjonnasta, joten pelkkää kasvuprosenttia kannattaa lukea yhdessä imeytymisen kanssa.</li>
               <li><b>Riskipisteet (0–100):</b> paine 40 p + seuraavan 24 kk kilpailevat asunnot suhteessa kohteen asuntoihin 25 p + asuntokokojen osuma 20 p + alle 6 kk päähän valmistuvat 15 p. Taso: ≥ 60 korkea, 35–59 kohonnut, alle 35 matala.</li>
               <li><b>Asuntokokojen osuma:</b> hankkeen keskimääräinen asuntokoko (huoneistoala / asunnot) poikkeaa kohteen keskikoosta enintään ±12 m².</li>
               <li><b>Muutokset:</b> Päivämäärien perusteella näytetään uudet lupapäätökset, aloitukset ja valmistumiset valitulta jaksolta. Lisäksi näytetään tilamuutokset, jotka on havaittu edellisestä tarkistuksesta tässä selaimessa.</li>
@@ -623,13 +625,13 @@ function kuntaStats(rows, A) {
 
 // ======================= Paavo (paikallinen kysyntä) =======================
 async function paavo(lat, lon) {
-  const key = 'sm_c_paavo_' + lat.toFixed(3) + '_' + lon.toFixed(3), c = cacheGet(key, TTL.paavo); if (c) return c;
+  const key = 'sm_c_paavo2_' + lat.toFixed(3) + '_' + lon.toFixed(3), c = cacheGet(key, TTL.paavo); if (c) return c;
   const get = async y => { const b = [lon - 0.0002, lat - 0.0001, lon + 0.0002, lat + 0.0001].join(','); const u = `${PAAVO}?service=WFS&version=2.0.0&request=GetFeature&typeNames=postialue:pno_tilasto_${y}&outputFormat=application/json&srsName=EPSG:4326&bbox=${b},EPSG:4326`; const j = await (await safeFetch(u)).json(); const p = j.features && j.features[0] && j.features[0].properties; return p ? { pc: p.postinumeroalue, name: p.nimi, pop: p.he_vakiy, hh: p.te_taly, rent: p.te_vuok_as, dw: p.ra_asunn, m2: p.ra_as_kpa, young: (p.he_20_24 || 0) + (p.he_25_29 || 0) + (p.he_30_34 || 0), single: p.te_yks } : null; };
   const [a, b] = await Promise.all([get(PAAVO_Y0), get(PAAVO_Y1)]);
   if (!a || !b) return null;
   const valid = v => v != null && v > 0;
   const g = (x, y) => valid(x) && valid(y) ? Math.pow(y / x, 1 / 5) - 1 : null;
-  const out = { pc: b.pc, name: b.name, y0: a, y1: b, hhRate: g(a.hh, b.hh), popRate: g(a.pop, b.pop), dwRate: g(a.dw, b.dw), youngRate: g(a.young, b.young), rentShare: valid(b.hh) && b.rent >= 0 ? b.rent / b.hh : null };
+  const out = { pc: b.pc, name: b.name, y0: a, y1: b, hhRate: g(a.hh, b.hh), popRate: g(a.pop, b.pop), dwRate: g(a.dw, b.dw), youngRate: g(a.young, b.young), rentShare: valid(b.hh) && b.rent >= 0 ? b.rent / b.hh : null, absorb: valid(a.dw) && valid(b.dw) && b.dw - a.dw > 20 && valid(a.hh) && valid(b.hh) ? (b.hh - a.hh) / (b.dw - a.dw) : null };
   cacheSet(key, out); return out;
 }
 
@@ -705,14 +707,16 @@ function derive(R) {
   const n24 = sumWindow(rows, 0, 24), n36 = sumWindow(rows, 0, 36), n6 = sumWindow(rows, 0, 6);
   const supplyRate = stock > 0 ? (n36 / 3) / stock : null;
   const demandRate = pv ? pv.hhRate : null, kuntaRate = kc.M ? kc.M.rate : null;
-  const ratio = demandRate != null && demandRate > 0.0005 ? supplyRate / demandRate : (supplyRate > 0.002 ? Infinity : null);
+  const DEM_FLOOR = 0.005, demandWeak = demandRate != null && demandRate < DEM_FLOOR;
+  const ratio = demandRate != null && supplyRate != null ? supplyRate / Math.max(demandRate, DEM_FLOOR) : null;
   const ratioK = kuntaRate > 0 ? supplyRate / kuntaRate : null;
   const ownM2 = site.m2 || null, ownApts = site.apts || null;
   const pipe24 = rows.filter(p => active(p) && p.e.date && p.e.date < addM(NOW, 24));
   const sized = pipe24.filter(p => p.m2 && ownM2), matchApts = sized.filter(p => Math.abs(p.m2 - ownM2) <= SIZE_TOL).reduce((s, p) => s + p.apts * p.e.w, 0), sizedApts = sized.reduce((s, p) => s + p.apts * p.e.w, 0);
   const matchShare = sizedApts > 0 ? matchApts / sizedApts : null;
   const base = ownApts || (stock ? stock * 0.1 : null);
-  const s1 = ratio == null ? 0 : Math.min((isFinite(ratio) ? ratio : 3) / 3, 1) * 40;
+  const absorbPen = pv && pv.absorb != null && pv.absorb < 0.6 ? 1.25 : 1;
+  const s1 = ratio == null ? 0 : Math.min(ratio * absorbPen / 3, 1) * 40;
   const s2 = base ? Math.min((n24 / base) / 3, 1) * 25 : 0;
   const s3 = matchShare != null ? matchShare * 20 * Math.min(n24 / (base || 1), 1) : 0;
   const s4 = base ? Math.min(n6 / base, 1) * 15 : (n6 > 0 ? 8 : 0);
@@ -720,7 +724,7 @@ function derive(R) {
   const level = risk >= 60 ? 'bad' : risk >= 35 ? 'warn' : 'good';
   const soon6 = rows.filter(p => active(p) && p.e.date && p.e.date < addM(NOW, 6)).sort((a, b) => a.e.date - b.e.date);
   const stale = rows.filter(p => supplyOK(p) && p.e.stale);
-  Object.assign(R, { n6, n24, n36, supplyRate, demandRate, kuntaRate, ratio, ratioK, matchShare, matchApts, risk, riskParts: [s1, s2, s3, s4].map(Math.round), level, soon6, stale,
+  Object.assign(R, { n6, n24, n36, supplyRate, demandRate, demandWeak, kuntaRate, ratio, ratioK, matchShare, matchApts, risk, riskParts: [s1, s2, s3, s4].map(Math.round), level, soon6, stale,
     uc: rows.filter(p => supplyOK(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0),
     permitRaw: rows.filter(p => active(p) && p.e.kind === 'permit').reduce((s, p) => s + p.apts, 0) });
   R.events = eventsFor(R, 90);
@@ -730,7 +734,7 @@ function derive(R) {
 function eventsFor(R, days) {
   const since = addD(NOW, -days), ev = [];
   for (const p of R.rows) {
-    if (!supplyOK(p) && p.laji !== NEW) continue;
+    if (!supplyOK(p)) continue;
     if (p.valmis && p.valmis >= since) ev.push({ type: 'Valmistunut', date: p.valmis, p });
     else if (p.aloitus && p.aloitus >= since) ev.push({ type: 'Aloitettu', date: p.aloitus, p });
     else if (p.paatos && p.paatos >= since && p.tila !== 'Rauennut') ev.push({ type: 'Uusi lupa', date: p.paatos, p });
@@ -742,7 +746,7 @@ function eventsFor(R, days) {
     for (const p of R.rows) {
       const was = prev.s[p.id];
       if (was === undefined && !ev.some(x => x.p === p) && supplyOK(p)) ev.push({ type: 'Uusi Ryhdissä', date: new Date(prev.t), p, snap: true });
-      else if (was && was !== p.tila && !ev.some(x => x.p === p)) ev.push({ type: `Tila: ${was} → ${p.tila}`, date: new Date(prev.t), p, snap: true });
+      else if (was && was !== p.tila && supplyOK(p) && !ev.some(x => x.p === p)) ev.push({ type: `Tila: ${was} → ${p.tila}`, date: new Date(prev.t), p, snap: true });
     }
   }
   if (!prev || Date.now() - prev.t > 864e5) store.set(key, { t: Date.now(), s: cur });
@@ -754,7 +758,7 @@ function alertsFor(R, ctx = 'site') {
   if (R.ratio != null) {
     const lvl = R.ratio >= 2 ? 'bad' : R.ratio >= 1 ? 'warn' : 'good';
     if (ctx === 'site' || lvl !== 'good') out.push({ lvl, t: `${name}${lvl === 'bad' ? 'Tarjonta kasvaa selvästi kysyntää nopeammin' : lvl === 'warn' ? 'Tarjonta kasvaa kysyntää nopeammin' : 'Tarjonta kysynnän tahdissa'}`,
-      d: `Lähialueen asuntokanta kasvaa seuraavan 3 vuoden aikana ${spct(R.supplyRate)}/v. Postinumeroalueen taloudet ovat kasvaneet ${spct(R.demandRate)}/v (2019→2024)${isFinite(R.ratio) ? `, joten suhde on <b>${n1(R.ratio)}×</b>` : ', eli kysyntä ei kasva'}.` });
+      d: `Lähialueen asuntokanta kasvaa seuraavan 3 vuoden aikana ${spct(R.supplyRate)}/v. Postinumeroalueen talouksien määrä on muuttunut ${spct(R.demandRate)}/v (2019→2024)${R.demandWeak ? ', joten kysyntä ei käytännössä kasva' : ''}. Suhde on <b>${n1(R.ratio)}×</b>${R.pv && R.pv.absorb != null ? ` ja imeytyminen ${pct(Math.max(0, R.pv.absorb))}` : ''}.` });
   }
   if (R.soon6.length) {
     const apts = R.soon6.reduce((s, p) => s + p.apts * p.e.w, 0), lvl = own ? (apts / own >= 0.5 ? 'bad' : 'warn') : (apts >= 50 ? 'bad' : 'warn');
@@ -823,10 +827,11 @@ function barCfg(t, labels, extra = []) {
 }
 function heroHtml(R) {
   const lvl = R.ratio == null ? 'info' : R.ratio >= 2 ? 'bad' : R.ratio >= 1 ? 'warn' : 'good';
-  const verdict = R.ratio == null ? 'Paikallista kysyntää ei voitu laskea' : !isFinite(R.ratio) ? 'Tarjonta kasvaa, vaikka paikallinen kysyntä ei kasva' : `Tarjonta kasvaa ${n1(R.ratio)}× ${R.ratio >= 1 ? 'nopeammin' : 'hitaammin'} kuin paikallinen kysyntä`;
+  const verdict = R.ratio == null ? 'Paikallista kysyntää ei voitu laskea' : R.demandWeak && R.supplyRate > 0.002 ? `Tarjonta kasvaa ${spct(R.supplyRate)}/v, mutta paikallinen kysyntä ei kasva (${spct(R.demandRate)}/v)` : R.ratio >= 1 ? `Tarjonta kasvaa ${n1(R.ratio)}× paikallisen kysynnän vauhtia` : `Tarjonta kasvaa hitaammin kuin paikallinen kysyntä (${n1(R.ratio)}×)`;
+  const ab = R.pv && R.pv.absorb != null ? ` Imeytyminen 2019→2024: ${pct(Math.max(0, R.pv.absorb))} postinumeroalueen uusista asunnoista täyttyi uusilla talouksilla${R.pv.absorb < 0.6 ? ', eli alue ei ole niellyt edellistä tarjontaa täysin' : ''}.` : '';
   const vals = [R.supplyRate, R.demandRate, R.kuntaRate].filter(v => v != null && isFinite(v)), mx = Math.max(0.01, ...vals.map(Math.abs));
   const bar = (k, sub, v, col) => { const w = v == null ? 0 : Math.min(Math.abs(v) / mx, 1) * 50; return `<div class="brow"><div class="k">${k}<small>${sub}</small></div><div class="track"><div class="zero" style="left:50%"></div>${v == null ? '' : `<div class="fill" style="background:${col};${v >= 0 ? `left:50%;width:${w}%` : `left:${50 - w}%;width:${w}%`}"></div>`}</div><div class="v">${spct(v)}/v</div></div>`; };
-  return `<div class="hero"><div class="verdict ${lvl}">${verdict}<small>Paikallinen tarjonta = seuraavan 3 v valmistuvat asunnot ${rr(R.r)} säteellä suhteessa nykyiseen kantaan (${n0(R.stock)} as.). Paikallinen kysyntä = postinumeroalueen ${R.pv ? esc(R.pv.pc + ' ' + R.pv.name) : ''} talouksien kasvu 2019→2024.${R.ratioK != null ? ` Kunnan väestöennusteeseen verrattuna suhde on ${n1(R.ratioK)}×.` : ''}</small></div>
+  return `<div class="hero"><div class="verdict ${lvl}">${verdict}<small>Paikallinen tarjonta = seuraavan 3 v valmistuvat asunnot ${rr(R.r)} säteellä suhteessa nykyiseen kantaan (${n0(R.stock)} as.). Paikallinen kysyntä = postinumeroalueen ${R.pv ? esc(R.pv.pc + ' ' + R.pv.name) : ''} talouksien kasvu 2019→2024.${R.ratioK != null ? ` Kunnan väestöennusteeseen verrattuna suhde on ${n1(R.ratioK)}×.` : ''}${ab}</small></div>
     <div class="bars">${bar('Paikallinen tarjonta', `${n0(R.n36)} as. / 3 v · ${rr(R.r)}`, R.supplyRate, css('--st-uc'))}${bar('Paikallinen kysyntä', R.pv ? `taloudet ${n0(R.pv.y0.hh)} → ${n0(R.pv.y1.hh)} (Paavo)` : 'ei saatavilla', R.demandRate, css('--accent'))}${bar('Kunnan kysyntä (ennuste)', R.kc.M ? `${n0(R.kc.M.yrBase)} as./v vuoteen 2040` : '', R.kuntaRate, css('--dim'))}
     <div class="hint">Riskipisteet <span class="pill ${R.level}">${R.risk}</span> = paine ${R.riskParts[0]} + 24 kk tarjonta ${R.riskParts[1]} + kokojen osuma ${R.riskParts[2]} + alle 6 kk ${R.riskParts[3]}</div></div></div>`;
 }
@@ -840,7 +845,7 @@ function renderDetail(R, mode) {
   $('#d-facts-sub').textContent = `${kc.name} · ${rr(R.r)}`;
   const F = (k, v, x) => `<div class="row"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x || ''}</div></div>`;
   $('#d-facts').innerHTML = [
-    mode === 'kohde' ? F('Kohde', s.apts ? n0(s.apts) + ' as.' : '–', `${esc(s.osoite || '')}, ${esc(s.kuntaNimi || '')}${s.kaupunginosa ? ' · ' + esc(s.kaupunginosa) : ''}${s.vuosi ? ' · valm. ' + s.vuosi : ''}${s.m2 ? ' · keskikoko ' + n1(s.m2) + ' m²' : ''}${s.url ? ` · <a href="${esc(s.url)}" target="_blank" rel="noopener">leonakodit.fi</a>` : ''}${s.huom ? ' · ' + esc(s.huom) : ''}`) : '',
+    mode === 'kohde' ? F('Kohde', s.apts ? n0(s.apts) + ' as.' : '–', `${esc(s.osoite || '')}, ${esc(s.kuntaNimi || '')}${s.kaupunginosa ? ' · ' + esc(s.kaupunginosa) : ''}${s.vuosi ? ' · valm. ' + s.vuosi : ''}${s.m2 ? ' · keskikoko ' + n1(s.m2) + ' m²' : ''}${s.url ? ` · <a href="${esc(s.url)}" target="_blank" rel="noopener">kohdesivu</a>` : ''}${s.huom ? ' · ' + esc(s.huom) : ''}`) : '',
     F('Nykyinen asuntokanta säteellä', n0(R.stock) + ' as.', 'Ryhti, asuinrakennukset'),
     F('Valmistuu alle 6 kk', n0(R.n6) + ' as.', R.soon6.length ? R.soon6.map(p => `~${fmtM(p.e.date)} ${n0(p.apts)} as.`).join(' · ') : 'ei hankkeita'),
     F('Valmistuu 24 kk', n0(R.n24) + ' as.', `rakenteilla ${n0(R.uc)} as. · luvitettu ${n0(R.permitRaw)} as. (ennen painotusta)`),
@@ -859,6 +864,7 @@ function renderDetail(R, mode) {
   $('#d-dm-sub').textContent = `${pv ? pv.pc + ' ' + pv.name + ' · ' : ''}${kc.name}`;
   $('#d-dm').innerHTML = [
     pv ? F('Postinumeroalueen taloudet 2019 → 2024', spct(pv.hhRate) + '/v', `${n0(pv.y0.hh)} → ${n0(pv.y1.hh)} taloutta`) : '',
+    pv && pv.absorb != null ? F('Imeytyminen 2019 → 2024', pct(Math.max(0, pv.absorb)), `talouksien lisäys ${n0(pv.y1.hh - pv.y0.hh)} / asuntojen lisäys ${n0(pv.y1.dw - pv.y0.dw)} postinumeroalueella`) : '',
     pv ? F('Asukkaat 2019 → 2024', spct(pv.popRate) + '/v', `${n0(pv.y0.pop)} → ${n0(pv.y1.pop)}`) : '',
     pv ? F('20–34-vuotiaat 2019 → 2024', spct(pv.youngRate) + '/v', `${n0(pv.y0.young)} → ${n0(pv.y1.young)} · vuokra-asumisen ydinikäryhmä`) : '',
     pv ? F('Vuokralla asuvat taloudet', pct(pv.rentShare), `${n0(pv.y1.rent)} / ${n0(pv.y1.hh)} taloutta · asuntojen keskikoko ${n1(pv.y1.m2)} m²`) : '',
@@ -976,7 +982,7 @@ const PCOLS = [
   { k: 'nimi', t: 'Kohde', v: R => R.site.nimi },
   { k: 'kunta', t: 'Kunta', v: R => R.site.kuntaNimi || '' },
   { k: 'risk', t: 'Riski', num: 1, v: R => R.error ? -1 : R.risk },
-  { k: 'ratio', t: 'Tarjonta / kysyntä', num: 1, v: R => R.error || R.ratio == null ? -1 : (isFinite(R.ratio) ? R.ratio : 99) },
+  { k: 'ratio', t: 'Tarjonta / kysyntä', num: 1, v: R => R.error || R.ratio == null ? -1 : R.ratio },
   { k: 'sup', t: 'Tarjonta %/v', num: 1, v: R => R.supplyRate ?? -1 },
   { k: 'dem', t: 'Kysyntä %/v', num: 1, v: R => R.demandRate ?? -9 },
   { k: 'n6', t: '≤ 6 kk', num: 1, v: R => R.n6 || 0 },
@@ -991,7 +997,7 @@ function drawPfTable() {
   $('#pf-tbl tbody').innerHTML = rows.map(R => R.error ? `<tr><td>${esc(R.site.nimi)}</td><td>${esc(R.site.kuntaNimi || '')}</td><td colspan="9" class="est">${esc(R.error)}</td></tr>` :
     `<tr class="click" data-id="${esc(R.site.id)}"><td>${esc(R.site.nimi)}<br><span class="est">${esc(R.site.osoite || '')}${R.site.apts ? ' · ' + n0(R.site.apts) + ' as.' : ''}</span></td><td>${esc(R.site.kuntaNimi || '')}</td>
     <td class="num"><span class="pill ${R.level}">${R.risk}</span></td>
-    <td class="num"><b style="color:var(--${R.ratio == null ? 'muted' : R.ratio >= 2 ? 'bad' : R.ratio >= 1 ? 'warn' : 'good'})">${R.ratio == null ? '–' : isFinite(R.ratio) ? n1(R.ratio) + '×' : '∞'}</b></td>
+    <td class="num"><b style="color:var(--${R.ratio == null ? 'muted' : R.ratio >= 2 ? 'bad' : R.ratio >= 1 ? 'warn' : 'good'})" title="${R.demandWeak ? 'Paikallinen kysyntä ei kasva – suhde laskettu 0,5 %/v alarajalla' : ''}">${R.ratio == null ? '–' : n1(R.ratio) + '×' + (R.demandWeak ? '↓' : '')}</b></td>
     <td class="num">${spct(R.supplyRate)}</td><td class="num">${spct(R.demandRate)}</td>
     <td class="num">${R.n6 ? `<b style="color:var(--bad)">${n0(R.n6)}</b>` : '–'}</td><td class="num">${n0(R.n24)}</td>
     <td class="num">${R.matchShare == null ? '–' : pct(R.matchShare)}</td><td class="num">${R.plans.length || '–'}</td><td class="num">${R.events.filter(e => e.date >= addD(NOW, -30)).length || '–'}</td></tr>`).join('');
@@ -1013,8 +1019,8 @@ function drawCalendar(ok) {
     { label: 'Luvitettu, painotettu', data: months.map(m => Math.round((byM[key(m)] || []).filter(x => x.p.e.kind === 'permit').reduce((s, x) => s + x.p.apts * x.p.e.w, 0))), backgroundColor: css('--st-permit'), stack: 's' }] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: legendOpt, tooltip: tipOpt }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } } } });
   $('#cal-tbl thead').innerHTML = '<tr><th>Kuukausi</th><th>Hanke</th><th class="num">Asuntoja</th><th class="num">m²/as</th><th>Tila</th><th>Lähimmät kohteet</th></tr>';
-  const rows = []; months.forEach(m => (byM[key(m)] || []).sort((a, b) => b.p.apts - a.p.apts).forEach(x => rows.push({ m, x })));
-  $('#cal-tbl tbody').innerHTML = rows.length ? rows.map(({ m, x }) => { const p = x.p, six = p.e.date < addM(NOW, 6); return `<tr><td>${six ? '<b style="color:var(--bad)">' : ''}${m.getMonth() + 1}/${m.getFullYear()}${six ? '</b>' : ''}</td><td class="wrap">${p.addr ? esc(p.addr) : esc(p.kaytto)}<br><span class="est">kiint. ${esc(p.kiint || '')}</span></td><td class="num">${n0(p.apts)}</td><td class="num">${p.m2 ? n0(p.m2) : '–'}</td><td>${p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu ' + pct(p.e.w)}</td><td class="wrap">${x.sites.map(s => `<a href="#view=kohde&id=${encodeURIComponent(s.R.site.id)}">${esc(s.R.site.nimi)}</a> ${n0(s.dist)} m${s.R.site.m2 && p.m2 && Math.abs(p.m2 - s.R.site.m2) <= SIZE_TOL ? ' <span class="pill warn">koko</span>' : ''}`).join(', ')}</td></tr>`; }).join('') : '<tr><td colspan="6" class="empty">Ei tunnettuja valmistumisia 24 kk sisällä.</td></tr>';
+  const rows = []; months.forEach(m => { const grp = {}; (byM[key(m)] || []).forEach(x => { const g = (x.p.kiint || x.p.id) + '|' + x.p.e.kind; if (!grp[g]) grp[g] = { p: Object.assign(Object.create(Object.getPrototypeOf(x.p)), x.p, { apts: 0, ha: 0, e: x.p.e }), sites: x.sites, n: 0 }; const G = grp[g]; G.p.apts += x.p.apts; G.p.ha += (x.p.ha || 0); G.n++; G.p.m2 = G.p.apts && G.p.ha ? G.p.ha / G.p.apts : null; if (!G.p.addr && x.p.addr) G.p.addr = x.p.addr; }); Object.values(grp).sort((a, b) => b.p.apts - a.p.apts).forEach(x => rows.push({ m, x })); });
+  $('#cal-tbl tbody').innerHTML = rows.length ? rows.map(({ m, x }) => { const p = x.p, six = p.e.date < addM(NOW, 6); return `<tr><td>${six ? '<b style="color:var(--bad)">' : ''}${m.getMonth() + 1}/${m.getFullYear()}${six ? '</b>' : ''}</td><td class="wrap">${p.addr ? esc(p.addr) : esc(p.kaytto)}<br><span class="est">${esc(p.kaytto)}${x.n > 1 ? ' · ' + x.n + ' rakennusta' : ''} · kiint. ${esc(p.kiint || '')}</span></td><td class="num">${n0(p.apts)}</td><td class="num">${p.m2 ? n0(p.m2) : '–'}</td><td>${p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu ' + pct(p.e.w)}</td><td class="wrap">${x.sites.map(s => `<a href="#view=kohde&id=${encodeURIComponent(s.R.site.id)}">${esc(s.R.site.nimi)}</a> ${n0(s.dist)} m${s.R.site.m2 && p.m2 && Math.abs(p.m2 - s.R.site.m2) <= SIZE_TOL ? ' <span class="pill warn">koko</span>' : ''}`).join(', ')}</td></tr>`; }).join('') : '<tr><td colspan="6" class="empty">Ei tunnettuja valmistumisia 24 kk sisällä.</td></tr>';
 }
 function drawEvents() {
   const days = +$('#ev-days').value, ev = dedupeEvents(pfResults.filter(R => !R.error), days);
@@ -1032,12 +1038,12 @@ function detailCsv(R) {
   return [h.join(';'), ...R.rows.map(p => [KIND_TXT[p.e.kind], p.laji, p.kaytto, p.addr, p.apts, p.m2 ? p.m2.toFixed(1) : '', p.ka, fmtD(p.paatos), fmtD(p.aloitus), fmtD(p.valmis), p.e.kind !== 'done' && p.e.date ? fmtM(p.e.date) : '', p.e.kind === 'permit' ? p.e.w.toFixed(2) : '', Math.round(p.dist), p.m2 && R.site.m2 ? (Math.abs(p.m2 - R.site.m2) <= SIZE_TOL ? 'kyllä' : 'ei') : '', p.kiint, p.lupa, p.lat, p.lon].map(csvQ).join(';'))].join('\n');
 }
 function detailJson(R) {
-  return JSON.stringify({ kohde: R.site, sade_m: R.r, kunta: R.kc.name, haettu: NOW.toISOString(), asuntokanta: R.stock, tarjonta_pv: R.supplyRate, kysynta_pv: R.demandRate, kunta_kysynta_pv: R.kuntaRate, suhde: isFinite(R.ratio) ? R.ratio : null, riski: R.risk, valmistuu_6kk: R.n6, valmistuu_24kk: R.n24, koko_osuma: R.matchShare,
+  return JSON.stringify({ kohde: R.site, sade_m: R.r, kunta: R.kc.name, haettu: NOW.toISOString(), asuntokanta: R.stock, tarjonta_pv: R.supplyRate, kysynta_pv: R.demandRate, kunta_kysynta_pv: R.kuntaRate, suhde: R.ratio, imeytyminen: R.pv ? R.pv.absorb : null, riski: R.risk, valmistuu_6kk: R.n6, valmistuu_24kk: R.n24, koko_osuma: R.matchShare,
     paavo: R.pv, kaavat: R.plans, hankkeet: R.rows.map(p => ({ tila: KIND_TXT[p.e.kind], kaytto: p.kaytto, osoite: p.addr, asuntoja: p.apts, m2: p.m2, lupa: p.paatos, aloitus: p.aloitus, valmistunut: p.valmis, arvio: p.e.date, paino: p.e.w, etaisyys: Math.round(p.dist), kiint: p.kiint })) }, null, 1);
 }
 function pfCsv() {
   const h = ['kohde', 'osoite', 'kunta', 'asunnot', 'riski', 'tarjonta_kysynta_suhde', 'tarjonta_pv', 'kysynta_pv_paavo', 'kysynta_pv_kunta', 'valmistuu_6kk', 'valmistuu_24kk', 'koko_osuma', 'kaavat_vireilla', 'muutokset_30pv'];
-  return [h.join(';'), ...pfResults.filter(R => !R.error).map(R => [R.site.nimi, R.site.osoite, R.site.kuntaNimi, R.site.apts, R.risk, R.ratio == null ? '' : isFinite(R.ratio) ? R.ratio.toFixed(2) : 'inf', R.supplyRate?.toFixed(4), R.demandRate?.toFixed(4), R.kuntaRate?.toFixed(4), Math.round(R.n6), Math.round(R.n24), R.matchShare == null ? '' : R.matchShare.toFixed(2), R.plans.length, R.events.filter(e => e.date >= addD(NOW, -30)).length].map(csvQ).join(';'))].join('\n');
+  return [h.join(';'), ...pfResults.filter(R => !R.error).map(R => [R.site.nimi, R.site.osoite, R.site.kuntaNimi, R.site.apts, R.risk, R.ratio == null ? '' : R.ratio.toFixed(2), R.supplyRate?.toFixed(4), R.demandRate?.toFixed(4), R.kuntaRate?.toFixed(4), Math.round(R.n6), Math.round(R.n24), R.matchShare == null ? '' : R.matchShare.toFixed(2), R.plans.length, R.events.filter(e => e.date >= addD(NOW, -30)).length].map(csvQ).join(';'))].join('\n');
 }
 function calCsv() {
   const { proj } = calendarData(pfResults.filter(R => !R.error));
@@ -1057,7 +1063,7 @@ function digest({ days = 7 } = {}) {
   L.push(`MUUTOKSET ${days} PV (${ev.length}):`);
   ev.forEach(x => L.push(`- ${fmtD(x.e.date)} | ${x.e.type} | ${x.e.p.apts} as | ${x.e.p.addr || x.e.p.kaytto} | id ${x.e.p.id} | kohteet: ${x.sites.join('; ')}`));
   L.push('RISKI (top 10):');
-  [...ok].sort((a, b) => b.risk - a.risk).slice(0, 10).forEach(R => L.push(`- ${R.site.nimi} | ${R.risk} p | suhde ${R.ratio == null ? '-' : isFinite(R.ratio) ? R.ratio.toFixed(1) : 'inf'} | tarjonta ${pct(R.supplyRate)}/v kysyntä ${pct(R.demandRate)}/v | 6kk ${Math.round(R.n6)} 24kk ${Math.round(R.n24)} | koko-osuma ${R.matchShare == null ? '-' : pct(R.matchShare)} | kaavat ${R.plans.length}`));
+  [...ok].sort((a, b) => b.risk - a.risk).slice(0, 10).forEach(R => L.push(`- ${R.site.nimi} | ${R.risk} p | suhde ${R.ratio == null ? '-' : R.ratio.toFixed(1)}${R.demandWeak ? ' (kysyntä ei kasva)' : ''} | tarjonta ${pct(R.supplyRate)}/v kysyntä ${pct(R.demandRate)}/v | 6kk ${Math.round(R.n6)} 24kk ${Math.round(R.n24)} | koko-osuma ${R.matchShare == null ? '-' : pct(R.matchShare)} | kaavat ${R.plans.length}`));
   const addrs = [...new Set(dedupeProjects(ok, p => active(p) && p.addr).map(x => x.p.addr))];
   L.push(`SEURATTAVAT OSOITTEET (aktiiviset hankkeet, ${addrs.length}): ${addrs.join(' | ')}`);
   return L.join('\n');
@@ -1067,7 +1073,7 @@ window.SupplyMonitor = {
   async runPortfolio(o = {}) { await runPortfolio(o); lastDigest = digest(o); return { ok: true, length: lastDigest.length, chunks: Math.ceil(lastDigest.length / 900) }; },
   chunk(i, size = 900) { return lastDigest.slice(i * size, (i + 1) * size); },
   digest: o => (lastDigest = digest(o)),
-  results: () => pfResults, version: '2.0'
+  results: () => pfResults, current: () => curR, version: '2.1'
 };
 
 // ======================= Claude =======================
@@ -1078,7 +1084,7 @@ function contextText() {
   const R = curR; if (!R) return 'Ei valittua kohdetta.';
   const act = R.rows.filter(p => isRes(p.kaytto) && p.apts > 0 && p.e.kind !== 'lapsed').sort((a, b) => (a.e.date ? +a.e.date : 9e15) - (b.e.date ? +b.e.date : 9e15)).slice(0, 50);
   return [`KOHDE: ${R.site.nimi || R.site.label} (${R.kc.name}), säde ${rr(R.r)}, ${fmtD(NOW)}.${R.site.apts ? ` Omia asuntoja ${R.site.apts}, keskikoko ${R.site.m2} m².` : ''}`,
-    `TARJONTA vs KYSYNTÄ: paikallinen tarjonta ${pct(R.supplyRate)}/v (3 v putki ${Math.round(R.n36)} as. / kanta ${R.stock}), paikallinen kysyntä ${pct(R.demandRate)}/v (Paavo ${R.pv ? R.pv.pc : ''} taloudet 2019→2024), kunnan ennuste ${pct(R.kuntaRate)}/v. Suhde ${R.ratio == null ? '-' : isFinite(R.ratio) ? R.ratio.toFixed(2) : 'inf'}. Riski ${R.risk}/100.`,
+    `TARJONTA vs KYSYNTÄ: paikallinen tarjonta ${pct(R.supplyRate)}/v (3 v putki ${Math.round(R.n36)} as. / kanta ${R.stock}), paikallinen kysyntä ${pct(R.demandRate)}/v (Paavo ${R.pv ? R.pv.pc : ''} taloudet 2019→2024), kunnan ennuste ${pct(R.kuntaRate)}/v. Suhde ${R.ratio == null ? '-' : R.ratio.toFixed(2)}${R.demandWeak ? ' (paikallinen kysyntä ei kasva, alaraja 0,5 %/v)' : ''}. Imeytyminen ${R.pv && R.pv.absorb != null ? pct(R.pv.absorb) : '-'}. Riski ${R.risk}/100.`,
     `VALMISTUU: alle 6 kk ${Math.round(R.n6)} as., 24 kk ${Math.round(R.n24)} as. Koko-osuma ${R.matchShare == null ? '-' : pct(R.matchShare)}.`,
     `KAAVAT VIREILLÄ: ${R.plans.map(p => p.name + ' (' + (p.stage || '') + ')').join('; ') || 'ei'}`,
     'HANKKEET: tila | käyttö | osoite | as | m2/as | lupa | aloitus | valmistuminen | etäisyys',
@@ -1114,6 +1120,7 @@ async function route() {
   const h = new URLSearchParams(location.hash.slice(1));
   let view = h.get('view') || (h.get('q') ? 'haku' : 'portfolio');
   if (view === 'portfolio' && !loadPortfolio() && h.get('view') == null) view = 'haku';
+  if (view !== curView) clearStatus();
   curView = view; convo = [];
   document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('on', a.dataset.view === view));
   $('#v-portfolio').classList.toggle('on', view === 'portfolio'); $('#v-detail').classList.toggle('on', view !== 'portfolio');
