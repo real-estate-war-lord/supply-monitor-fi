@@ -912,7 +912,7 @@ function drawDetailTable(R) {
 }
 
 // ======================= Portfolio =======================
-let PF = null, pfResults = [], pfRunId = 0;
+let PF = null, pfResults = [], pfRunId = 0, pfPromise = null;
 function loadPortfolio() { const p = store.get('sm_portfolio'); PF = p && Array.isArray(p.kohteet) && p.kohteet.length ? p : null; return PF; }
 function normPortfolio(obj) {
   const arr = Array.isArray(obj) ? obj : obj.kohteet || obj.properties || [];
@@ -922,7 +922,8 @@ function normPortfolio(obj) {
 }
 const siteOf = k => ({ id: k.id, nimi: k.nimi, osoite: k.osoite, kuntaNimi: k.kunta, kaupunginosa: k.kaupunginosa, lat: k.lat, lon: k.lon, apts: k.apts, m2: k.m2, vuosi: k.vuosi, url: k.url, huom: k.huom, label: k.nimi });
 async function ensureCoords(list) { for (const k of list) if (k.lat == null && k.osoite) { try { const g = await geocode(k.osoite + (k.kunta ? ', ' + k.kunta : '')); k.lat = g.lat; k.lon = g.lon; k.kunta_nro = k.kunta_nro || g.kunta; } catch (e) {} } }
-async function runPortfolio({ force = false } = {}) {
+function runPortfolio(o = {}) { const p = runPortfolioInner(o); pfPromise = p; return p; }
+async function runPortfolioInner({ force = false } = {}) {
   if (!loadPortfolio()) return [];
   const my = ++pfRunId, r = +$('#pf-radius').value, list = PF.kohteet;
   await ensureCoords(list);
@@ -933,7 +934,7 @@ async function runPortfolio({ force = false } = {}) {
   const kunnat = [...new Set(list.map(k => k.kunta_nro).filter(Boolean))];
   await pool(kunnat, 4, k => kuntaCtx(k, force).catch(() => null));
   const res = await pool(list, 6, async k => { if (k.lat == null) throw new Error('ei koordinaatteja'); const R = await analyzeSite({ ...siteOf(k), kunta: k.kunta_nro }, r, { force }); done++; upd(); return R; });
-  if (my !== pfRunId) return pfResults;
+  if (my !== pfRunId) return pfPromise;
   pfResults = res.map((R, i) => R && !R.error ? R : { error: (R && R.error) || 'virhe', site: siteOf(list[i]) });
   $('#pf-prog-panel').hidden = true;
   const errs = pfResults.filter(x => x.error).length;
@@ -1070,8 +1071,8 @@ function digest({ days = 7 } = {}) {
 }
 let lastDigest = '';
 window.SupplyMonitor = {
-  async runPortfolio(o = {}) { await runPortfolio(o); lastDigest = digest(o); return { ok: true, length: lastDigest.length, chunks: Math.ceil(lastDigest.length / 900) }; },
-  chunk(i, size = 900) { return lastDigest.slice(i * size, (i + 1) * size); },
+  async runPortfolio(o = {}) { if (!loadPortfolio()) return { ok: false, error: 'Portfolio puuttuu tästä selaimesta' }; await runPortfolio(o); while (pfPromise && pfResults.length === 0) await pfPromise; lastDigest = digest(o); return { ok: true, length: lastDigest.length, chunks: Math.ceil(lastDigest.length / 800) }; },
+  chunk(i, size = 800) { return lastDigest.slice(i * size, (i + 1) * size); },
   digest: o => (lastDigest = digest(o)),
   results: () => pfResults, current: () => curR, version: '2.1'
 };
