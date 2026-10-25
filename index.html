@@ -936,7 +936,7 @@ async function askClaude(q) {
 function setView(v) {
   document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('on', a.dataset.view === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
-  if (v === 'projects' && map) setTimeout(() => map.invalidateSize(), 0);
+  if (v === 'projects' && map) setTimeout(() => { map.invalidateSize(); if (circle && S.lat != null) map.fitBounds(circle.getBounds(), { padding: [20, 20] }); }, 0);
   store.set('tm_view', v);
 }
 function savedList() { const l = store.get('tm_saved') || []; $('#saved').innerHTML = l.map(x => `<option value="${esc(x)}">`).join(''); return l; }
@@ -993,8 +993,8 @@ window.addEventListener('hashchange', () => { const h = new URLSearchParams(loca
   const th = store.get('tm_theme'); if (th) { document.documentElement.dataset.theme = th; $('#theme').value = th; }
   $('#ai-key').value = store.get('tm_ai_key') || ''; $('#ai-model').value = store.get('tm_ai_model') || 'claude-sonnet-5-5';
   initMap(); savedList();
-  const v = store.get('tm_view'); if (v) setView(v);
   const h = new URLSearchParams(location.hash.slice(1));
+  const v = store.get('tm_view'); if (v && h.get('q')) setView(v); else setView('projects');
   if (h.get('q')) { $('#q').value = h.get('q'); if (h.get('r')) $('#radius').value = h.get('r'); run(h.get('q'), +$('#radius').value); }
 })();
 </script>
