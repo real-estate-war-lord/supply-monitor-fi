@@ -1,71 +1,81 @@
 # Supply Monitor FI
 
-**Paljonko uutta asuntotarjontaa on tulossa osoitteen lähelle, ja riittääkö kysyntä siihen?**
+**Paljonko uutta asuntotarjontaa on tulossa kohteiden lähelle, ja riittääkö paikallinen kysyntä siihen?**
 
-Supply Monitor FI hakee minkä tahansa suomalaisen osoitteen ympäriltä (250 m – 2 km) kaikki luvitetut, rakenteilla olevat ja valmistuneet rakennushankkeet. Se arvioi, milloin ne valmistuvat, ja vertaa tarjonnan kasvua kunnan väestöennusteen mukaiseen asuntotarpeeseen vuoteen 2040.
+Supply Monitor FI seuraa rakennushankkeita, vireillä olevia kaavoja ja paikallista kysyntää joko omien kohteiden (portfolio) tai minkä tahansa suomalaisen osoitteen ympärillä.
 
 → **Käytä:** https://real-estate-war-lord.github.io/supply-monitor-fi/
 
-Kaikki data on julkista avointa dataa, ja se haetaan ajon aikana suoraan selaimessa. Työkalussa ei ole palvelinta, tietokantaa eikä kirjautumista.
+Kaikki data on julkista avointa dataa, ja se haetaan ajon aikana suoraan selaimessa. Työkalussa ei ole palvelinta, tietokantaa eikä kirjautumista. Oma kohdelista tallennetaan vain käyttäjän selaimeen.
 
-## Käyttö
-
-- **Haku:** kirjoita osoite (`Vuotie 47 C, Helsinki`), liitä Google Mapsin pitkä linkki, anna koordinaatit (`60.207, 25.149`) tai klikkaa karttaa.
-- **Jakaminen:** osoiterivin linkki avaa saman haun, esim. `…/supply-monitor-fi/#q=Keilaranta%201,%20Espoo&r=500`. Napin ⧉ painaminen kopioi linkin.
-- **Tallennus:** ☆ tallentaa osoitteen pikavalintoihin (vain omaan selaimeen).
-
-### Näkymät
+## Näkymät
 
 | Näkymä | Sisältö |
 |---|---|
-| Vaatii huomiota (aina ylimpänä) | paikallinen tarjontapaine vs. kunnan kysyntä, seuraavan 24 kk valmistumiset, suurhankkeet (≥ 100 as.), kunnan tuotanto vs. tarve, vanhentuneet luvat |
-| Hankkeet | kartta ja lista (rakenteilla, luvitettu, valmistunut, rauennut), CSV-vienti |
-| Tarjonta ajassa | valmistuneet ja arvioidut valmistumiset vuosittain säteellä ja koko kunnassa, laskentaoletukset |
-| Tarjonta vs. kysyntä | kannan kasvu vs. asuntotarpeen kasvu, väestöennuste ja 20–34-vuotiaiden kehitys |
-| ✦ Claude | tarjontapaineen tulkinta, kilpailijahankkeet ja tilannekuva komitealle |
+| **Portfolio** | Kohteet riskijärjestyksessä: paikallinen tarjonta vs. kysyntä, alle 6 kk ja 24 kk päähän valmistuvat, asuntokokojen osuma, kaavat ja muutokset. Lisäksi Vaatii huomiota -lista (suljettuna), valmistumiskalenteri 24 kk, kartta ja muutosloki. Vienti CSV:nä ja PDF:nä. |
+| **Kohde** | Yhden kohteen kehitys: paikallinen tarjonta vs. paikallinen kysyntä, imeytyminen, hankkeet osoitteineen, kaavat, kysyntä ja laskentaoletukset. Vienti CSV:nä, JSON:na ja PDF:nä. |
+| **Haku** | Sama analyysi mille tahansa osoitteelle, Google Maps -linkille, koordinaateille tai kartalta klikatulle pisteelle. |
+| **✦ Claude** | Kysymykset näkymän datasta: mihin pitää varautua, tarjonta vs. kysyntä, tilannekuva komitealle. Toimii omalla API-avaimella tai "Kopioi Claudelle" -napilla. |
 
-Claude-paneeli toimii joko omalla Anthropic API -avaimella, joka tallentuu vain selaimeen, tai "Kopioi Claudelle" -napilla, joka kopioi kysymyksen ja datan claude.ai:hin liitettäväksi.
+## Portfolion tuonti
+
+Valitse **Portfolio: tuo / vaihda** ja anna JSON-tiedosto:
+
+```json
+{"nimi": "Oma salkku", "kohteet": [
+  {"id": "k1", "nimi": "As Oy Esimerkki", "osoite": "Katu 1", "kunta": "Espoo", "kuntanumero": "049",
+   "lat": 60.2, "lon": 24.7, "postinumero": "02770", "asuntoja_ryhti": 90, "keskikoko_m2": 48.2, "url": "https://…"}
+]}
+```
+
+Pakollisia ovat `nimi` ja joko `lat`/`lon` tai `osoite`, jolloin koordinaatit haetaan Ryhdistä. Lista tallentuu vain selaimen localStorageen.
+
+## Automaatio
+
+Sivulla on rajapinta ajastetulle ajolle (esim. Claude-ajastus Chromessa):
+
+```js
+await window.SupplyMonitor.runPortfolio({ days: 7 })   // → { ok, length, chunks }
+window.SupplyMonitor.chunk(0)                         // raportti ~800 merkin paloina
+```
+
+Raportissa ovat alle 6 kk päähän valmistuvat hankkeet kiinteistöittäin, muutokset, riskin top 10 ja aktiivisten hankkeiden osoitteet (esim. vuokrailmoitusdataan yhdistämistä varten).
 
 ## Datalähteet
 
-| Tieto | Lähde | Rajapinta |
-|---|---|---|
-| Rakennushankkeet: lupa, aloitus, valmistuminen, asunnot, kerrosala | Ryhti – SYKE / ympäristöministeriö | [avoimet_lupa_rakennukset](https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset) |
-| Nykyinen asuntokanta | Ryhti | [avoimet_rakennukset](https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_rakennukset) |
-| Osoitehaku | Ryhti, varalla OpenStreetMap Nominatim | [open_address](https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/open_address) |
-| Väestöennuste 2024–2045 kunnittain | Tilastokeskus | [14wx](https://pxdata.stat.fi/PxWeb/pxweb/fi/StatFin/StatFin__vaenn/statfin_vaenn_pxt_14wx.px/) |
-| Asuntokunnat ja asuntoväestö | Tilastokeskus | [15fd](https://pxdata.stat.fi/PxWeb/pxweb/fi/StatFin/StatFin__asku/statfin_asku_pxt_15fd.px/) |
-| Karttapohja | OpenStreetMap (tiedostona avattuna Esri Light Gray) | – |
+| Tieto | Lähde |
+|---|---|
+| Rakennushankkeet, nykyinen asuntokanta, hankkeiden osoitteet, osoitehaku | Ryhti, Syke / ympäristöministeriö: [avoimet_lupa_rakennukset](https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset), avoimet_rakennukset, [open_permit_address](https://paikkatiedot.ymparisto.fi/geoserver/ryhti_permit/ogc/features/v1/collections/open_permit_address), open_address |
+| Vireillä olevat kaavat | Helsinki (kaavahakemisto), Vantaa (kaavat vireillä), Espoo (kaavoitushankkeet); muut kunnat Ryhdin kaavarajapinnasta, kun tiedot on siirretty sinne |
+| Paikallinen kysyntä | Tilastokeskus [Paavo](https://tilastokeskus.fi/tup/rajapintapalvelut/paavo_en.html): postinumeroalueen taloudet, asukkaat, asunnot ja vuokralla asuvat (2019→2024) |
+| Kunnan kysyntä | Tilastokeskus: [väestöennuste 2024 (14wx)](https://pxdata.stat.fi/PxWeb/pxweb/fi/StatFin/StatFin__vaenn/statfin_vaenn_pxt_14wx.px/) ja [asuntokunnat (15fd)](https://pxdata.stat.fi/PxWeb/pxweb/fi/StatFin/StatFin__asku/statfin_asku_pxt_15fd.px/) |
+| Karttapohja | © OpenStreetMapin tekijät |
 
 Lähdemerkinnät:
+- Lähde: Suomen ympäristökeskus (Syke), Ryhti ([CC BY 4.0](https://www.syke.fi/en/environmental-data/use-license-and-responsibilities)).
 - Lähde: Tilastokeskus ([CC BY 4.0](https://stat.fi/fi/tietoa-meista/tutustu-tilastokeskukseen/lainsaadanto/kayttoehdot)).
-- Rakennus- ja osoitetiedot: Ryhti, Suomen ympäristökeskus ja ympäristöministeriö. Ryhdin avoimille rakennustiedoille ei ole julkaistu erillistä lisenssitekstiä. Tarkemmat käyttöehdot: ryhti@syke.fi.
-- Karttapohja © OpenStreetMapin tekijät.
+- Kaavatiedot: Helsingin, Vantaan ja Espoon kaupungit.
 
 ## Menetelmä
 
-- **Tarjonta** = uudisrakennus (`Uusi rakennus tai rakennelma`), käyttötarkoitus kerrostalo tai pientalo, huoneistoja > 0. Laajennukset näkyvät listassa, mutta niitä ei lasketa tarjontaan, ja muutostyöt on rajattu pois.
-- **Valmistumisarvio** perustuu kunnan omaan Ryhti-historiaan:
-  - rakenteilla = aloitus + mediaanirakennusaika
-  - luvitettu = lupapäätös + mediaaniviive + rakennusaika, painotettuna toteutumisasteella (3–6 v sitten luvitetuista asunnoista aloitettu osuus)
-  - yli 48 kk vanhat aloittamattomat luvat merkitään epävarmoiksi, eikä niitä lasketa ennusteeseen
-- **Asuntotarve 2025→2040** = asuntokunnat 2025 × (väkiluku 2040 / 2025 − 1). Yläraja olettaa, että asuntokunnan koon 2015–2025 trendi jatkuu.
-- **Paikallinen paine** = seuraavan 36 kk valmistumiset / 3 / nykyinen kanta säteellä, verrattuna kunnan vuotuiseen tarpeeseen / asuntokunnat. Suhde > 1 tarkoittaa, että lähialueen kanta kasvaa kunnan kysyntää nopeammin.
-- **Validointi:** Ryhdistä laskettu Helsingin valmistuneiden asuntojen määrä 2025 oli 4 119. Kaupungin oma luku on 4 186 ([hel.fi](https://www.hel.fi/fi/uutiset/rakentamisen-hiljentyminen-vaikeuttaa-edelleen-helsingin-asuntotuotantotavoitteiden-saavuttamista)).
+- **Tarjonta** = uudisrakennus, käyttötarkoitus kerrostalo tai pientalo, huoneistoja > 0.
+- **Valmistumisarvio** perustuu kunnan omaan Ryhti-historiaan (mediaaniviive, mediaanirakennusaika ja toteutumisaste). Yli 48 kk vanhat aloittamattomat luvat ovat epävarmoja, eikä niitä lasketa mukaan.
+- **Paikallinen tarjonta vs. kysyntä** = (seuraavan 36 kk valmistumiset / 3 / nykyinen kanta säteellä) jaettuna postinumeroalueen talouksien vuosikasvulla 2019→2024. Kysynnän alaraja on 0,5 %/v, ja ↓-merkintä tarkoittaa, ettei paikallinen kysyntä kasva.
+- **Imeytyminen** = talouksien lisäys / asuntojen lisäys postinumeroalueella 2019→2024. Jos imeytyminen on alle 60 %, alue ei ole niellyt edellistä tarjontaa, ja paineen pisteitä korotetaan.
+- **Riskipisteet 0–100** = paine 40 + 24 kk tarjonta suhteessa kohteen asuntoihin 25 + asuntokokojen osuma (±12 m²) 20 + alle 6 kk päähän valmistuvat 15.
+- **Muutokset** ovat päivämäärien perusteella näkyviä lupia, aloituksia ja valmistumisia sekä selaimessa havaittuja tilamuutoksia edelliseen tarkistukseen nähden.
 
 ## Rajoitteet
 
 - Ryhdin kattavuus riippuu kuntien tiedonsiirrosta.
-- Asemakaavavaiheen hankkeet, joilla ei vielä ole rakennuslupaa, eivät näy.
-- Data ei kerro, onko kohde vuokra- vai omistusasuntokohde, eikä rakennuttajaa.
-- Väestöennuste on kuntatasoinen.
+- Data ei kerro, onko kohde vuokra- vai omistusasuntokohde.
+- Paavo kuvaa mennyttä kehitystä postinumerotasolla. Uusilla alueilla talouksien kasvu johtuu itse uudesta tarjonnasta, joten lue kasvua yhdessä imeytymisen kanssa.
 
 ## Tekninen
 
 - Yksi tiedosto (`index.html`). Kirjastot: Leaflet 1.9.4 ja Chart.js 4.4.1 (cdnjs).
-- Kunnan hankeaineisto välimuistitetaan selaimeen 7 päiväksi. Ensimmäinen haku suuressa kunnassa vie noin 10 s, ja "↻ Päivitä data" ohittaa välimuistin.
-- Paikallisesti: `python3 -m http.server` ja selaimella http://localhost:8000. Tiedostona avattuna toimii Chromessa, mutta Safari estää levyltä avatun sivun datahaut.
-- Teemat: Energy Manager, Neutral Mono (60-30-10) ja CapMan.
+- Välimuistit: kunnan hankkeet ja väestöennuste 7 pv, kaavat 1 pv, Paavo 30 pv ja kohteen lähihankkeet 12 h. "↻ Päivitä data" ohittaa välimuistin.
+- Paikallisesti: `python3 -m http.server`. Safari estää tiedostona avatun sivun datahaut.
 
 ## Lisenssi
 

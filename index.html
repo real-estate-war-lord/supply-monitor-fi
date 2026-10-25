@@ -947,8 +947,8 @@ function renderPortfolio() {
   $('#crumb').innerHTML = `${esc(PF.nimi)}<small>${PF.kohteet.length} kohdetta · säde ${rr(+$('#pf-radius').value)}${PF.haettu ? ' · lista ' + esc(PF.haettu) : ''}</small>`;
   // huomiot
   const al = [];
-  const soon = dedupeProjects(ok, p => active(p) && p.e.date && p.e.date < addM(NOW, 6));
-  if (soon.length) al.push({ lvl: 'bad', t: `Varaudu: ${soon.length} hanketta (${n0(soon.reduce((s, x) => s + x.p.apts * x.p.e.w, 0))} as.) valmistuu alle 6 kk päähän`, d: soon.sort((a, b) => a.p.e.date - b.p.e.date).slice(0, 10).map(x => `~${fmtM(x.p.e.date)} · ${n0(x.p.apts)} as.${x.p.m2 ? ' · ' + n0(x.p.m2) + ' m²/as' : ''}${x.p.addr ? ' · ' + esc(x.p.addr) : ''} → <b>${x.sites.map(s => esc(s.R.site.nimi) + ' ' + n0(s.dist) + ' m').join(', ')}</b>`).join('<br>') });
+  const soon = groupProjects(dedupeProjects(ok, p => active(p) && p.e.date && p.e.date < addM(NOW, 6)));
+  if (soon.length) al.push({ lvl: 'bad', t: `Varaudu: ${soon.length} kiinteistöä (${n0(soon.reduce((s, x) => s + x.p.apts * x.p.e.w, 0))} as.) valmistuu alle 6 kk päähän`, d: soon.sort((a, b) => b.p.apts * b.p.e.w - a.p.apts * a.p.e.w).slice(0, 12).map(x => `<b>${n0(x.p.apts)} as.</b> ${esc(x.p.kaytto.toLowerCase())} ~${fmtM(x.p.e.date)}${x.p.m2 ? ' · ' + n0(x.p.m2) + ' m²/as' : ''}${x.p.addr ? ' · ' + esc(x.p.addr) : ''} → ${x.sites.map(s => `<a href="#view=kohde&id=${encodeURIComponent(s.R.site.id)}">${esc(s.R.site.nimi)}</a> ${n0(s.dist)} m${s.R.site.m2 && x.p.m2 && Math.abs(x.p.m2 - s.R.site.m2) <= SIZE_TOL ? ' <span class="pill warn">koko</span>' : ''}`).join(', ')}`).join('<br>') + (soon.length > 12 ? `<br><span class="est">+ ${soon.length - 12} pienempää – katso valmistumiskalenteri</span>` : '') });
   const high = ok.filter(R => R.level === 'bad').sort((a, b) => b.risk - a.risk);
   if (high.length) al.push({ lvl: 'warn', t: `${high.length} kohdetta korkealla riskitasolla`, d: high.slice(0, 8).map(R => `<b>${esc(R.site.nimi)}</b> ${R.risk} p · tarjonta ${spct(R.supplyRate)}/v vs. kysyntä ${spct(R.demandRate)}/v`).join('<br>') });
   const ev7 = dedupeEvents(ok, 7);
