@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Supply Monitor FI</title>
-<meta name="description" content="Rakennushankkeet ja uusi asuntotarjonta minkä tahansa suomalaisen osoitteen ympärillä, suhteutettuna kunnan väestöennusteeseen. Julkinen data: Ryhti (SYKE) ja Tilastokeskus.">
+<meta name="description" content="Rakennushankkeet, kaavat ja uusi asuntotarjonta kohteiden ympärillä suhteutettuna paikalliseen kysyntään. Julkinen data: Ryhti (Syke), Tilastokeskus, kuntien kaavarajapinnat.">
 <meta property="og:title" content="Supply Monitor FI">
-<meta property="og:description" content="Rakennushankkeet ja asuntotarjonta osoitteen ympärillä vs. väestöennusteen kysyntä.">
+<meta property="og:description" content="Rakennushankkeet ja asuntotarjonta kohteiden ympärillä vs. paikallinen kysyntä.">
 <meta name="theme-color" content="#14150F">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314150F'/%3E%3Crect x='7' y='17' width='4' height='8' fill='%238A8C81'/%3E%3Crect x='14' y='12' width='4' height='13' fill='%23B07A1E'/%3E%3Crect x='21' y='7' width='4' height='18' fill='%231C6B5C'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,37 +16,36 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-
 :root, [data-theme="em"]{
   --bg:#F6F6F3;--panel:#FFFFFF;--panel2:#FAFAF8;--line:#E6E6E0;--line2:#EFEFEA;
   --ink:#16170F;--ink2:#4A4C43;--muted:#8A8C81;--dim:#A6A89E;
   --side:#14150F;--side2:#22241C;--side-ink:#E4E5DF;--side-muted:#8B8E82;--side-on:#2E3127;
   --accent:#1C6B5C;--accent-ink:#FFFFFF;
   --bad:#B0331B;--warn:#B07A1E;--good:#1C6B5C;--info:#5C5F52;
-  --st-uc:#B07A1E;--st-permit:#1C6B5C;--st-done:#8A8C81;--st-lapsed:#C9C9C1;--st-other:#5C5F52;
+  --st-uc:#B07A1E;--st-permit:#1C6B5C;--st-done:#8A8C81;--st-lapsed:#C9C9C1;--st-other:#5C5F52;--st-plan:#6B5CA5;
   --need:#B0331B;--need2:#E7B9AE;
   --disp:'Familjen Grotesk',ui-sans-serif,system-ui,sans-serif;
   --body:'Inter',ui-sans-serif,system-ui,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
   --r:10px;
 }
-[data-theme="mono"]{ 
+[data-theme="mono"]{
   --bg:#FFFFFF;--panel:#FFFFFF;--panel2:#F7F7F7;--line:#E4E4E4;--line2:#EFEFEF;
   --ink:#111111;--ink2:#444444;--muted:#8C8C8C;--dim:#B0B0B0;
   --side:#F1F1F1;--side2:#E6E6E6;--side-ink:#161616;--side-muted:#7A7A7A;--side-on:#FFFFFF;
   --accent:#2F55D4;--accent-ink:#FFFFFF;
   --bad:#C2321F;--warn:#B8860B;--good:#2F55D4;--info:#666666;
-  --st-uc:#2F55D4;--st-permit:#8AA2EC;--st-done:#9A9A9A;--st-lapsed:#D6D6D6;--st-other:#555555;
+  --st-uc:#2F55D4;--st-permit:#8AA2EC;--st-done:#9A9A9A;--st-lapsed:#D6D6D6;--st-other:#555555;--st-plan:#7A5CC0;
   --need:#111111;--need2:#BDBDBD;
   --disp:'Inter',ui-sans-serif,system-ui,sans-serif;
 }
-[data-theme="capman"]{ 
+[data-theme="capman"]{
   --bg:#F4F1E9;--panel:#FFFDF8;--panel2:#F9F6EF;--line:#E2DCCD;--line2:#ECE7DB;
   --ink:#10211B;--ink2:#3E4C45;--muted:#7F887F;--dim:#A8AEA3;
   --side:#0D3B2E;--side2:#14493A;--side-ink:#EDE8DA;--side-muted:#9DB0A5;--side-on:#1C5644;
   --accent:#0D3B2E;--accent-ink:#F4F1E9;
   --bad:#A63A24;--warn:#B08840;--good:#2E6B52;--info:#5A6B62;
-  --st-uc:#B08840;--st-permit:#2E6B52;--st-done:#8E968C;--st-lapsed:#D3CDBE;--st-other:#4F5F57;
+  --st-uc:#B08840;--st-permit:#2E6B52;--st-done:#8E968C;--st-lapsed:#D3CDBE;--st-other:#4F5F57;--st-plan:#6E5A8E;
   --need:#A63A24;--need2:#E3BFB2;
   --disp:'Source Serif 4',Georgia,serif;
 }
@@ -54,8 +53,8 @@
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 var(--body)}
 a{color:var(--accent)}
 button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .app{display:grid;grid-template-columns:232px 1fr;height:100vh}
-
 .side{background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;padding:18px 12px;gap:6px;overflow:auto}
 .brand{font:700 13px/1.2 var(--mono);letter-spacing:.08em;padding:0 8px 14px}
 .brand small{display:block;font:400 11px/1.3 var(--body);letter-spacing:0;color:var(--side-muted);margin-top:4px}
@@ -63,133 +62,160 @@ button,input,select,textarea{font:inherit;color:inherit}
 .nav a{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;color:var(--side-ink);text-decoration:none;cursor:pointer;font-weight:500}
 .nav a:hover{background:var(--side2)}
 .nav a.on{background:var(--side-on)}
-.nav a .cnt{font:400 11px var(--mono);color:var(--side-muted)}
+.nav a .cnt{font:500 11px var(--mono);color:var(--side-muted)}
+.nav a .cnt.hot{color:#fff;background:var(--bad);border-radius:9px;padding:0 6px}
 .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:8px}
 .side-foot label{font:500 10px var(--mono);letter-spacing:.1em;color:var(--side-muted);text-transform:uppercase}
 .side-foot select,.side-btn{background:var(--side2);border:1px solid transparent;color:var(--side-ink);border-radius:7px;padding:7px 9px;width:100%;text-align:left;cursor:pointer}
 .side-foot .build{font:400 10px var(--mono);color:var(--side-muted)}
-
 main{overflow:auto;display:flex;flex-direction:column;min-width:0}
-.top{position:sticky;top:0;z-index:500;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.crumb{font:600 17px var(--disp);min-width:180px}
+.top{position:sticky;top:0;z-index:500;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.crumb{font:600 17px var(--disp);min-width:180px;flex:1}
 .crumb small{display:block;font:400 11px var(--mono);color:var(--muted);letter-spacing:.02em}
-.search{display:flex;gap:6px;flex:1;min-width:300px;max-width:720px;margin-left:auto}
-.search input{flex:1;min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 11px}
-.search select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px}
+.ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ctl input,.ctl select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 10px}
+.ctl input.q{min-width:320px}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--dim)}
 .btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn.sm{padding:4px 9px;font-size:12px}
 .content{padding:18px 22px 40px;display:flex;flex-direction:column;gap:16px}
-.status{font:400 11px var(--mono);color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.status{font:400 11px var(--mono);color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;min-height:14px}
 .status .ok{color:var(--good)} .status .err{color:var(--bad)} .status .run{color:var(--warn)}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
-.panel-h{display:flex;align-items:baseline;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line2)}
+.panel-h{display:flex;align-items:baseline;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line2);flex-wrap:wrap}
 .panel-h h2{margin:0;font:600 15px var(--disp)}
 .panel-h .sub{font:400 11px var(--mono);color:var(--muted)}
 .panel-h .tools{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .panel-b{padding:14px 16px}
-
-.alerts{display:flex;flex-direction:column}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+.view{display:none;flex-direction:column;gap:16px}
+.view.on{display:flex}
+/* Vaatii huomiota -toggle */
+details.attn{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+details.attn>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;font:600 15px var(--disp)}
+details.attn>summary::-webkit-details-marker{display:none}
+details.attn>summary .chev{margin-left:auto;font:400 12px var(--mono);color:var(--muted)}
+details.attn[open]>summary .chev::after{content:' ▲'} details.attn:not([open])>summary .chev::after{content:' ▼'}
+details.attn[open]>summary{border-bottom:1px solid var(--line2)}
+.sev{display:inline-flex;gap:6px;align-items:center;font:500 11px var(--mono);color:var(--ink2)}
+.sev i{width:9px;height:9px;border-radius:50%;display:inline-block}
 .alert{display:grid;grid-template-columns:8px 1fr;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line2)}
 .alert:last-child{border-bottom:0}
 .alert .bar{border-radius:4px}
-.alert.bad .bar{background:var(--bad)} .alert.warn .bar{background:var(--warn)} .alert.info .bar{background:var(--info)} .alert.good .bar{background:var(--good)}
-.alert b{font-weight:600}
-.alert .t{font-weight:600;margin-bottom:2px}
-.alert .d{color:var(--ink2)}
-.empty{padding:28px 16px;color:var(--muted);text-align:center}
-
-#map{height:440px;border-radius:0 0 var(--r) var(--r)}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2)}
+.bad .bar,.dot.bad{background:var(--bad)} .warn .bar,.dot.warn{background:var(--warn)} .info .bar,.dot.info{background:var(--info)} .good .bar,.dot.good{background:var(--good)}
+.alert .t{font-weight:600;margin-bottom:2px} .alert .d{color:var(--ink2)} .alert b{font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+/* hero: paikallinen tarjonta vs kysyntä */
+.hero{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:22px;padding:18px}
+.hero .verdict{font:600 26px/1.15 var(--disp)}
+.hero .verdict small{display:block;font:400 13px/1.4 var(--body);color:var(--ink2);margin-top:8px}
+.hero .verdict.bad{color:var(--bad)} .hero .verdict.warn{color:var(--warn)} .hero .verdict.good{color:var(--good)}
+.bars{display:flex;flex-direction:column;gap:12px}
+.brow{display:grid;grid-template-columns:200px 1fr 90px;gap:10px;align-items:center;font-size:13px}
+.brow .k{color:var(--ink2)} .brow .k small{display:block;color:var(--muted);font-size:11px}
+.brow .track{height:12px;background:var(--line2);border-radius:6px;position:relative;overflow:hidden}
+.brow .track .zero{position:absolute;top:0;bottom:0;width:1px;background:var(--dim)}
+.brow .fill{position:absolute;top:0;bottom:0;border-radius:6px}
+.brow .v{font:500 14px var(--mono);text-align:right}
+/* taulukot */
+#map,.map{height:420px}
+.map-r{border-radius:0 0 var(--r) var(--r)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink2)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{border:1px solid var(--line);background:var(--panel2);border-radius:20px;padding:3px 10px;font-size:12px;cursor:pointer;user-select:none}
 .chip.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 .chk{font-size:12px;color:var(--ink2);display:flex;gap:5px;align-items:center;cursor:pointer}
-.tbl-wrap{overflow:auto;max-height:560px}
+.tbl-wrap{overflow:auto;max-height:600px}
 table{border-collapse:collapse;width:100%;font-size:12.5px}
-th{position:sticky;top:0;background:var(--panel2);text-align:left;font:500 10.5px var(--mono);letter-spacing:.04em;color:var(--muted);text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel2);text-align:left;font:500 10.5px var(--mono);letter-spacing:.04em;color:var(--muted);text-transform:uppercase;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;z-index:1}
 td{padding:7px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
 td.num,th.num{text-align:right;font-family:var(--mono)}
-tr:hover td{background:var(--panel2)}
+td.wrap{white-space:normal;min-width:180px}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--panel2)}
 tr.sel td{background:var(--line2)}
 .tag{display:inline-flex;align-items:center;gap:6px;font-size:12px}
 .tag i{width:8px;height:8px;border-radius:50%;display:inline-block}
 .est{color:var(--muted)}
-.flag{font:500 10px var(--mono);color:var(--warn);margin-left:6px}
-
+.flag{font:500 10px var(--mono);color:var(--warn);margin-left:6px;text-transform:uppercase}
+.pill{display:inline-block;font:500 11px var(--mono);border-radius:10px;padding:1px 7px;border:1px solid var(--line)}
+.pill.bad{background:var(--bad);color:#fff;border-color:var(--bad)} .pill.warn{background:var(--warn);color:#fff;border-color:var(--warn)} .pill.good{color:var(--good);border-color:var(--good)}
 .rows{display:flex;flex-direction:column}
 .row{display:grid;grid-template-columns:minmax(220px,1.1fr) 150px 2fr;gap:14px;padding:9px 0;border-bottom:1px solid var(--line2);align-items:baseline}
 .row:last-child{border-bottom:0}
-.row .k{color:var(--ink2)}
-.row .v{font:500 14px var(--mono);text-align:right}
-.row .x{color:var(--muted);font-size:12.5px}
-.row.hl .v{color:var(--accent)}
+.row .k{color:var(--ink2)} .row .v{font:500 14px var(--mono);text-align:right} .row .x{color:var(--muted);font-size:12.5px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.chart-box{position:relative;height:300px}
+.chart-box{position:relative;height:290px}
+.start{padding:22px 18px;display:flex;flex-direction:column;gap:12px}
+.start h3{margin:0;font:600 18px var(--disp)} .start p{margin:0;color:var(--ink2);max-width:780px}
+.start .ex{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:12.5px;color:var(--muted)}
+.hint code{font-family:var(--mono);font-size:11.5px;background:var(--panel2);border:1px solid var(--line2);border-radius:5px;padding:1px 5px}
+.prog{height:4px;background:var(--line2);border-radius:2px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
 details.method{font-size:12.5px;color:var(--ink2)}
 details.method summary{cursor:pointer;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-details.method ul{margin:8px 0 0;padding-left:18px}
-details.method li{margin:3px 0}
-.view{display:none;flex-direction:column;gap:16px}
-.view.on{display:flex}
-
+details.method ul{margin:8px 0 0;padding-left:18px} details.method li{margin:4px 0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:8px;font-size:13px;z-index:2000;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--line);border-top-color:var(--warn);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-1px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.leaflet-popup-content{font:12.5px/1.45 var(--body)} .leaflet-popup-content b{font-weight:600}
+.osm-tiles .leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.04)}
+.mappop button{margin-top:6px}
+/* Claude */
 .ai{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;background:var(--panel);border-left:1px solid var(--line);box-shadow:-12px 0 30px rgba(0,0,0,.08);transform:translateX(105%);transition:transform .2s ease;z-index:1000;display:flex;flex-direction:column}
 .ai.open{transform:none}
 .ai-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
-.ai-h h3{margin:0;font:600 15px var(--disp)}
-.ai-h .x{margin-left:auto}
+.ai-h h3{margin:0;font:600 15px var(--disp)} .ai-h .x{margin-left:auto}
 .ai-b{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
-.msg{padding:10px 12px;border-radius:9px;background:var(--panel2);border:1px solid var(--line2);white-space:normal}
-.msg.me{background:var(--line2)}
-.msg p{margin:0 0 8px} .msg p:last-child{margin:0}
-.msg ul{margin:4px 0 8px;padding-left:18px}
-.presets{display:flex;flex-direction:column;gap:6px}
-.presets button{text-align:left}
+.msg{padding:10px 12px;border-radius:9px;background:var(--panel2);border:1px solid var(--line2)}
+.msg.me{background:var(--line2)} .msg p{margin:0 0 8px} .msg p:last-child{margin:0} .msg ul{margin:4px 0 8px;padding-left:18px}
+.presets{display:flex;flex-direction:column;gap:6px} .presets button{text-align:left;white-space:normal}
 .ai-f{border-top:1px solid var(--line);padding:12px 16px;display:flex;flex-direction:column;gap:8px}
 .ai-f textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--panel);resize:vertical}
-.ai-set{display:none;flex-direction:column;gap:6px;font-size:12px;color:var(--ink2)}
-.ai-set.open{display:flex}
+.ai-set{display:none;flex-direction:column;gap:6px;font-size:12px;color:var(--ink2)} .ai-set.open{display:flex}
 .ai-set input{border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--panel)}
 .note{font-size:11.5px;color:var(--muted)}
-.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--line);border-top-color:var(--warn);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-1px}
-@keyframes sp{to{transform:rotate(360deg)}}
-.leaflet-popup-content{font:12.5px/1.45 var(--body)}
-.osm-tiles .leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.04)}
-.start{padding:22px 18px;display:flex;flex-direction:column;gap:12px}
-.start h3{margin:0;font:600 18px var(--disp)}
-.start p{margin:0;color:var(--ink2);max-width:760px}
-.start .ex{display:flex;gap:8px;flex-wrap:wrap}
-.start .hint{font-size:12.5px;color:var(--muted)}
-.start .hint code{font-family:var(--mono);font-size:11.5px;background:var(--panel2);border:1px solid var(--line2);border-radius:5px;padding:1px 5px}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:8px;font-size:13px;z-index:2000;opacity:0;transition:opacity .2s;pointer-events:none}
-.toast.on{opacity:1}
-.mappop button{margin-top:6px}
-.leaflet-popup-content b{font-weight:600}
+dialog{border:1px solid var(--line);border-radius:12px;padding:0;max-width:640px;width:92vw;background:var(--panel);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog .dh{padding:14px 16px;border-bottom:1px solid var(--line2);font:600 15px var(--disp)}
+dialog .db{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+dialog textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:8px;padding:8px;font:12px var(--mono)}
+dialog .df{padding:12px 16px;border-top:1px solid var(--line2);display:flex;gap:8px;justify-content:flex-end}
 @media (max-width:900px){
   .app{grid-template-columns:1fr;height:auto}
   .side{flex-direction:row;flex-wrap:wrap;padding:10px}
   .side-foot{margin:0;flex-direction:row;flex-wrap:wrap}
-  .grid2{grid-template-columns:1fr}
-  .row{grid-template-columns:1fr 110px}
-  .row .x{grid-column:1/-1}
-  .top{padding:10px 16px}.content{padding:14px 16px}
+  .grid2,.hero{grid-template-columns:1fr}
+  .row{grid-template-columns:1fr 110px} .row .x{grid-column:1/-1}
+  .brow{grid-template-columns:1fr 70px} .brow .track{grid-column:1/-1;grid-row:2}
+  .top{padding:10px 16px}.content{padding:14px 16px} .ctl input.q{min-width:0;flex:1}
+}
+@media print{
+  .side,.top .ctl,.ai,.status,#v-portfolio .tools,.no-print,.leaflet-control-container{display:none!important}
+  .app{display:block;height:auto} main{overflow:visible}
+  .view{display:none!important} .view.on{display:flex!important}
+  details.attn{display:block} details.attn>*{display:block}
+  .panel,details.attn{break-inside:avoid;border-color:#ccc}
+  .tbl-wrap{max-height:none;overflow:visible}
+  body{background:#fff}
 }
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="side">
-    <div class="brand">SUPPLY MONITOR FI<small>Rakennushankkeet, asuntotarjonta ja kysyntä · julkinen data</small></div>
-    <div class="navlabel">Analyysi</div>
+    <div class="brand">SUPPLY MONITOR FI<small>Rakennushankkeet, kaavat ja asuntotarjonta kohteiden ympärillä · julkinen data</small></div>
+    <div class="navlabel">Seuranta</div>
     <nav class="nav">
-      <a data-view="projects" class="on">Hankkeet <span class="cnt" id="n-projects"></span></a>
-      <a data-view="timeline">Tarjonta ajassa</a>
-      <a data-view="demand">Tarjonta vs. kysyntä</a>
+      <a data-view="portfolio" class="on">Portfolio <span class="cnt" id="n-portfolio"></span></a>
+      <a data-view="kohde">Kohde <span class="cnt" id="n-kohde"></span></a>
+      <a data-view="haku">Haku</a>
     </nav>
     <div class="side-foot">
+      <button class="side-btn" id="pf-btn">⇪ Portfolio: tuo / vaihda</button>
       <label for="theme">Teema</label>
       <select id="theme">
         <option value="em">Energy Manager</option>
@@ -198,117 +224,148 @@ details.method li{margin:3px 0}
       </select>
       <button class="side-btn" id="refresh" title="Ohita välimuisti ja hae kaikki data uudelleen">↻ Päivitä data</button>
       <button class="side-btn" id="about-btn">ⓘ Lähteet ja menetelmä</button>
-      <div class="build">v1.2 · 25.10.2026 · data haetaan ajon aikana</div>
+      <div class="build">v2.0 · 25.10.2026 · data haetaan ajon aikana</div>
     </div>
   </aside>
 
   <main>
     <header class="top">
-      <div class="crumb" id="crumb">Ei kohdetta<small>Syötä osoite</small></div>
-      <form class="search" id="search" autocomplete="off">
-        <input id="q" list="saved" aria-label="Osoite, karttalinkki tai koordinaatit" placeholder="Osoite, esim. Vuotie 47 C, Helsinki — tai 60.207,25.149">
+      <div class="crumb" id="crumb">Portfolio<small id="crumb-sub"></small></div>
+      <div class="ctl" id="ctl-portfolio">
+        <select id="pf-radius" aria-label="Seurantasäde"><option value="500">säde 500 m</option><option value="1000">säde 1 km</option><option value="2000">säde 2 km</option></select>
+        <button class="btn pri" id="pf-run">↻ Päivitä salkku</button>
+      </div>
+      <div class="ctl" id="ctl-kohde" hidden>
+        <select id="k-sel" aria-label="Kohde"></select>
+        <select id="k-radius" aria-label="Säde"><option value="250">250 m</option><option value="500">500 m</option><option value="1000">1 km</option><option value="2000">2 km</option></select>
+      </div>
+      <form class="ctl" id="ctl-haku" hidden autocomplete="off">
+        <input class="q" id="q" list="saved" aria-label="Osoite, karttalinkki tai koordinaatit" placeholder="Osoite, Google Maps -linkki tai 60.207, 25.149">
         <datalist id="saved"></datalist>
-        <select id="radius" title="Säde" aria-label="Hakusäde">
-          <option value="250">250 m</option>
-          <option value="500" selected>500 m</option>
-          <option value="1000">1 km</option>
-          <option value="2000">2 km</option>
-        </select>
+        <select id="radius" aria-label="Säde"><option value="250">250 m</option><option value="500" selected>500 m</option><option value="1000">1 km</option><option value="2000">2 km</option></select>
         <button class="btn pri" type="submit">Hae</button>
-        <button class="btn" type="button" id="save" title="Tallenna osoite pikavalintoihin" aria-label="Tallenna osoite">☆</button>
-        <button class="btn" type="button" id="share" title="Kopioi jakolinkki" aria-label="Kopioi jakolinkki">⧉</button>
+        <button class="btn" type="button" id="save" title="Tallenna osoite" aria-label="Tallenna osoite">☆</button>
       </form>
-      <button class="btn" id="ai-open">✦ Claude</button>
+      <div class="ctl">
+        <button class="btn" id="share" title="Kopioi linkki tähän näkymään" aria-label="Kopioi linkki">⧉</button>
+        <button class="btn" id="ai-open">✦ Claude</button>
+      </div>
     </header>
 
     <div class="content">
       <div class="status" id="status"></div>
 
-      <div class="panel" id="alerts-panel">
-        <div class="panel-h"><h2>Vaatii huomiota</h2><span class="sub" id="alerts-sub"></span></div>
-        <div class="alerts" id="alerts"><div class="start" id="start">
-          <h3>Paljonko uutta asuntotarjontaa on tulossa osoitteen lähelle?</h3>
-          <p>Syötä osoite. Supply Monitor hakee sen ympäriltä kaikki luvitetut, rakenteilla olevat ja valmistuneet rakennushankkeet Ryhti-järjestelmästä, arvioi milloin ne valmistuvat ja vertaa tarjonnan kasvua kunnan väestöennusteen mukaiseen asuntotarpeeseen.</p>
-          <div class="ex"><button class="btn ex-btn">Hermannin rantatie 2, Helsinki</button><button class="btn ex-btn">Keilaranta 1, Espoo</button><button class="btn ex-btn">Tikkurilantie 44, Vantaa</button><button class="btn ex-btn">Hatanpään valtatie 1, Tampere</button></div>
-          <div class="hint">Haun voi tehdä myös Google Maps -linkillä (pitkä linkki), koordinaateilla kuten <code>60.207, 25.149</code> tai klikkaamalla karttaa.</div>
-        </div></div>
-      </div>
-
-      <!-- ===== Näkymä 1: Hankkeet ===== -->
-      <section class="view on" id="v-projects">
-        <div class="panel">
-          <div class="panel-h"><h2>Hankkeet kartalla</h2><span class="sub" id="map-sub"></span>
-            <div class="tools legend">
-              <span><i style="background:var(--st-uc)"></i>Rakenteilla</span>
-              <span><i style="background:var(--st-permit)"></i>Luvitettu, ei aloitettu</span>
-              <span><i style="background:var(--st-done)"></i>Valmistunut</span>
-              <span><i style="background:var(--st-lapsed)"></i>Rauennut</span>
-            </div>
+      <!-- ================= PORTFOLIO ================= -->
+      <section class="view on" id="v-portfolio">
+        <div id="pf-empty" class="panel" hidden>
+          <div class="start">
+            <h3>Tuo seurattavat kohteet</h3>
+            <p>Portfolio-näkymä seuraa jokaisen kohteen lähellä olevia rakennushankkeita: uudet luvat, aloitukset ja valmistumiset, valmistumiset 6 kk etukäteen, asuntokokojen osuman ja vireillä olevat kaavat. Kohdelista tallennetaan vain tähän selaimeen, eikä sitä lähetetä mihinkään.</p>
+            <div class="ex"><button class="btn pri" id="pf-import2">⇪ Tuo kohdelista (JSON)</button></div>
+            <div class="hint">Muoto: <code>{"kohteet":[{"id","nimi","osoite","kunta","kuntanumero","lat","lon","postinumero","asuntoja_ryhti","keskikoko_m2","url"}]}</code>, tai pelkkä lista. Pakollisia ovat nimi ja koordinaatit tai osoite.</div>
           </div>
-          <div id="map"></div>
         </div>
-        <div class="panel">
-          <div class="panel-h"><h2>Hankelista</h2><span class="sub" id="tbl-sub"></span>
-            <div class="tools">
-              <div class="chips" id="chips">
-                <span class="chip on" data-k="uc">Rakenteilla</span>
-                <span class="chip on" data-k="permit">Luvitettu</span>
-                <span class="chip on" data-k="done">Valmistunut</span>
-                <span class="chip" data-k="lapsed">Rauennut</span>
-              </div>
-              <label class="chk"><input type="checkbox" id="resonly" checked> Vain asuinhankkeet</label>
-              <button class="btn sm" id="csv">CSV</button>
+        <div id="pf-main" hidden>
+          <div class="panel" id="pf-prog-panel" hidden><div class="panel-b"><div class="hint" id="pf-prog-txt"></div><div class="prog"><i id="pf-prog"></i></div></div></div>
+          <details class="attn" id="pf-attn"><summary>Vaatii huomiota <span class="sev" id="pf-attn-sev"></span><span class="chev">näytä</span></summary><div id="pf-alerts"></div></details>
+          <div class="panel">
+            <div class="panel-h"><h2>Kohteet</h2><span class="sub" id="pf-sub"></span>
+              <div class="tools"><button class="btn sm" id="pf-csv">CSV</button><button class="btn sm" id="pf-print">Tulosta / PDF</button></div></div>
+            <div class="tbl-wrap"><table id="pf-tbl"><thead></thead><tbody></tbody></table></div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Valmistumiskalenteri · 24 kk</h2><span class="sub">kilpailevat asunnot kohteiden säteellä kuukausittain (sama hanke lasketaan kerran)</span>
+              <div class="tools"><button class="btn sm" id="cal-csv">CSV</button></div></div>
+            <div class="panel-b"><div class="chart-box" style="height:240px"><canvas id="ch-cal"></canvas></div></div>
+            <div class="tbl-wrap" style="max-height:420px"><table id="cal-tbl"><thead></thead><tbody></tbody></table></div>
+          </div>
+          <div class="grid2">
+            <div class="panel">
+              <div class="panel-h"><h2>Kartta</h2><span class="sub">väri = riskitaso</span></div>
+              <div id="pf-map" class="map map-r"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-h"><h2>Muutokset</h2><span class="sub" id="ev-sub"></span>
+                <div class="tools"><select id="ev-days" aria-label="Aikaväli"><option value="7">7 pv</option><option value="30" selected>30 pv</option><option value="90">90 pv</option></select></div></div>
+              <div class="tbl-wrap" style="max-height:420px"><table id="ev-tbl"><thead></thead><tbody></tbody></table></div>
             </div>
           </div>
-          <div class="tbl-wrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
         </div>
       </section>
 
-      <!-- ===== Näkymä 2: Tarjonta ajassa ===== -->
-      <section class="view" id="v-timeline">
-        <div class="panel">
-          <div class="panel-h"><h2>Valmistuvat asunnot säteellä</h2><span class="sub" id="tl-local-sub"></span></div>
-          <div class="panel-b"><div class="chart-box"><canvas id="ch-local"></canvas></div></div>
+      <!-- ================= KOHDE & HAKU (yhteinen detail) ================= -->
+      <section class="view" id="v-detail">
+        <div class="panel" id="d-start">
+          <div class="start">
+            <h3>Paljonko uutta asuntotarjontaa on tulossa osoitteen lähelle?</h3>
+            <p>Syötä osoite. Haku etsii sen ympäriltä kaikki luvitetut, rakenteilla olevat ja valmistuneet rakennushankkeet sekä vireillä olevat kaavat. Lisäksi se arvioi, milloin hankkeet valmistuvat, ja vertaa tarjonnan kasvua paikalliseen kysyntään.</p>
+            <div class="ex"><button class="btn ex-btn">Hermannin rantatie 2, Helsinki</button><button class="btn ex-btn">Keilaranta 1, Espoo</button><button class="btn ex-btn">Tikkurilantie 44, Vantaa</button><button class="btn ex-btn">Hatanpään valtatie 1, Tampere</button></div>
+            <div class="hint">Haun voi tehdä myös Google Mapsin pitkällä linkillä, koordinaateilla kuten <code>60.207, 25.149</code> tai klikkaamalla karttaa.</div>
+          </div>
         </div>
-        <div class="panel">
-          <div class="panel-h"><h2>Valmistuvat asunnot koko kunnassa</h2><span class="sub" id="tl-kunta-sub"></span></div>
-          <div class="panel-b"><div class="chart-box"><canvas id="ch-kunta"></canvas></div></div>
-        </div>
-        <div class="panel">
-          <div class="panel-h"><h2>Laskentaoletukset</h2><span class="sub">johdettu kunnan omasta Ryhti-aineistosta</span></div>
-          <div class="panel-b"><div class="rows" id="assump"></div></div>
-        </div>
-      </section>
-
-      <!-- ===== Näkymä 3: Tarjonta vs. kysyntä ===== -->
-      <section class="view" id="v-demand">
-        <div class="panel">
-          <div class="panel-h"><h2>Paikallinen tarjonta suhteessa kunnan kysyntään</h2><span class="sub" id="dm-sub"></span></div>
-          <div class="panel-b"><div class="rows" id="dm-rows"></div></div>
-        </div>
-        <div class="panel">
-          <div class="panel-h"><h2>Kunnan asuntotuotanto vs. väestöennusteen asuntotarve</h2><span class="sub">as./v</span></div>
-          <div class="panel-b"><div class="chart-box"><canvas id="ch-demand"></canvas></div></div>
-        </div>
-        <div class="panel">
-          <div class="panel-h"><h2>Väestöennuste 2024–2045</h2><span class="sub" id="pop-sub"></span></div>
-          <div class="panel-b"><div class="chart-box" style="height:240px"><canvas id="ch-pop"></canvas></div></div>
+        <div id="d-main" hidden>
+          <div class="panel" id="d-hero"></div>
+          <details class="attn" id="d-attn"><summary>Vaatii huomiota <span class="sev" id="d-attn-sev"></span><span class="chev">näytä</span></summary><div id="d-alerts"></div></details>
+          <div class="panel" id="d-facts-panel"><div class="panel-h"><h2 id="d-facts-h">Kohde</h2><span class="sub" id="d-facts-sub"></span>
+            <div class="tools"><button class="btn sm" id="d-csv">CSV</button><button class="btn sm" id="d-json">JSON</button><button class="btn sm" id="d-print">Tulosta / PDF</button></div></div>
+            <div class="panel-b"><div class="rows" id="d-facts"></div></div></div>
+          <div class="panel">
+            <div class="panel-h"><h2>Hankkeet ja kaavat kartalla</h2><span class="sub" id="d-map-sub"></span>
+              <div class="tools legend">
+                <span><i style="background:var(--st-uc)"></i>Rakenteilla</span><span><i style="background:var(--st-permit)"></i>Luvitettu</span>
+                <span><i style="background:var(--st-done)"></i>Valmistunut</span><span><i style="background:var(--st-plan)"></i>Kaava vireillä</span>
+              </div></div>
+            <div id="d-map" class="map map-r"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Hankelista</h2><span class="sub" id="d-tbl-sub"></span>
+              <div class="tools">
+                <div class="chips" id="d-chips"><span class="chip on" data-k="uc">Rakenteilla</span><span class="chip on" data-k="permit">Luvitettu</span><span class="chip on" data-k="done">Valmistunut</span><span class="chip" data-k="lapsed">Rauennut</span></div>
+                <label class="chk"><input type="checkbox" id="d-resonly" checked> Vain asuinhankkeet</label>
+              </div></div>
+            <div class="tbl-wrap"><table id="d-tbl"><thead></thead><tbody></tbody></table></div>
+          </div>
+          <div class="grid2">
+            <div class="panel">
+              <div class="panel-h"><h2>Valmistuvat asunnot säteellä</h2><span class="sub" id="d-tl-sub"></span></div>
+              <div class="panel-b"><div class="chart-box"><canvas id="ch-local"></canvas></div></div>
+            </div>
+            <div class="panel">
+              <div class="panel-h"><h2>Kunnan tuotanto vs. asuntotarve</h2><span class="sub" id="d-kunta-sub"></span></div>
+              <div class="panel-b"><div class="chart-box"><canvas id="ch-kunta"></canvas></div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Vireillä olevat kaavat</h2><span class="sub" id="d-plans-sub"></span></div>
+            <div class="tbl-wrap" style="max-height:360px"><table id="d-plans"><thead></thead><tbody></tbody></table></div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Kysyntä</h2><span class="sub" id="d-dm-sub"></span></div>
+            <div class="panel-b"><div class="rows" id="d-dm"></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h2>Laskentaoletukset</h2><span class="sub">johdettu kunnan omasta Ryhti-aineistosta</span></div>
+            <div class="panel-b"><div class="rows" id="d-assump"></div></div>
+          </div>
         </div>
       </section>
 
       <div class="panel">
         <div class="panel-b">
-          <details class="method">
+          <details class="method" id="about-d">
             <summary id="about">Lähteet ja menetelmä</summary>
             <ul>
-              <li><b>Rakennushankkeet:</b> Ryhti – rakennetun ympäristön tietojärjestelmä (SYKE / ympäristöministeriö), avoin OGC API Features -rajapinta, kokoelma <a href="https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset" target="_blank" rel="noopener">avoimet_lupa_rakennukset</a> (lupavaiheessa olevat ja valmistuneet rakennukset). Nykyinen asuntokanta: <a href="https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_rakennukset" target="_blank" rel="noopener">avoimet_rakennukset</a>. Osoitehaku: Ryhti <a href="https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/open_address" target="_blank" rel="noopener">open_address</a>, varalla <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>.</li>
-              <li><b>Kysyntä:</b> Tilastokeskus, <a href="https://pxdata.stat.fi/PxWeb/pxweb/fi/StatFin/StatFin__vaenn/statfin_vaenn_pxt_14wx.px/" target="_blank" rel="noopener">Väestöennuste 2024 (14wx)</a> ja <a href="https://pxdata.stat.fi/PxWeb/pxweb/fi/StatFin/StatFin__asku/statfin_asku_pxt_15fd.px/" target="_blank" rel="noopener">Asuntokunnat ja asuntoväestö (15fd)</a>.</li>
-              <li><b>Tarjonta</b> = uudisrakennukset (toimenpiteen laji "Uusi rakennus tai rakennelma"), käyttötarkoitus kerrostalo tai pientalo, huoneistojen lukumäärä &gt; 0. Laajennukset näkyvät listassa, mutta niitä ei lasketa tarjontaan, koska huoneistomäärä kuvaa koko rakennusta. Muutostyöt on rajattu pois.</li>
-              <li><b>Valmistumisarvio:</b> rakenteilla = aloituspäivä + kunnan mediaanirakennusaika. Luvitettu = lupapäätös + kunnan mediaaniviive aloitukseen + rakennusaika. Lisäksi luvitettu painotetaan kunnan toteutumisasteella (3–6 v sitten luvitetuista asunnoista aloitettu osuus). Yli 4 v vanhat aloittamattomat luvat merkitään epävarmoiksi, eikä niitä lasketa ennusteeseen.</li>
-              <li><b>Asuntotarve 2025→2040</b> = asuntokunnat 2025 × (ennustettu väkiluku 2040 / 2025 − 1). Yläraja olettaa asuntokunnan koon muutoksen jatkuvan 2015–2025 vauhdilla.</li>
-              <li><b>Paikallinen paine</b> = säteelle seuraavan 3 v aikana valmistuvat asunnot vuodessa (3 v, koska lupapäätöksestä valmistumiseen kuluu tyypillisesti alle 2 v, jolloin jo luvitettu putki kattaa ikkunan) / nykyinen asuntokanta säteellä, verrattuna kunnan vuotuiseen asuntotarpeeseen / asuntokunnat. Suhde &gt; 1 tarkoittaa, että lähialueen kanta kasvaa nopeammin kuin kunnan kysyntä keskimäärin.</li>
-              <li><b>Lisenssit ja lähdemerkinnät:</b> Lähde: Tilastokeskus (<a href="https://stat.fi/fi/tietoa-meista/tutustu-tilastokeskukseen/lainsaadanto/kayttoehdot" target="_blank" rel="noopener">CC BY 4.0</a>). Rakennus- ja osoitetiedot: Ryhti, Suomen ympäristökeskus ja ympäristöministeriö. Karttapohja © OpenStreetMapin tekijät. Sivu ei tallenna mitään palvelimelle: välimuisti, tallennetut osoitteet ja Clauden API-avain pysyvät vain tässä selaimessa.</li>
-              <li><b>Rajoitteet:</b> Ryhdin kattavuus riippuu kuntien tiedonsiirrosta. Asemakaavavaiheen hankkeet, joilla ei ole vielä rakennuslupaa, eivät näy. Väestöennuste on kuntatasoinen, joten paikallista kysyntää ei ennusteta erikseen.</li>
+              <li><b>Rakennushankkeet:</b> Ryhti, Suomen ympäristökeskus (Syke) ja ympäristöministeriö. Lähteinä ovat <a href="https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset" target="_blank" rel="noopener">avoimet_lupa_rakennukset</a> (luvat, aloitukset ja valmistumiset), <a href="https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_rakennukset" target="_blank" rel="noopener">avoimet_rakennukset</a> (nykyinen asuntokanta), <a href="https://paikkatiedot.ymparisto.fi/geoserver/ryhti_permit/ogc/features/v1/collections/open_permit_address" target="_blank" rel="noopener">open_permit_address</a> (hankkeiden osoitteet) ja open_address (osoitehaku).</li>
+              <li><b>Kaavat:</b> Helsingin <a href="https://kartta.hel.fi/ws/geoserver/avoindata/wfs" target="_blank" rel="noopener">kaavahakemisto</a> (vireillä), Vantaan <a href="https://gis.vantaa.fi/geoserver/wfs" target="_blank" rel="noopener">kaavat vireillä</a>, Espoon <a href="https://kartat.espoo.fi/teklaogcweb/wfs.ashx" target="_blank" rel="noopener">kaavoitushankkeet</a> ja muissa kunnissa Ryhdin kaavarajapinta (valmisteilla olevat asemakaavat) sitä mukaa kuin kunnat siirtävät tietonsa.</li>
+              <li><b>Kysyntä:</b> Tilastokeskus. Paikallinen kysyntä tulee <a href="https://tilastokeskus.fi/tup/rajapintapalvelut/paavo_en.html" target="_blank" rel="noopener">Paavo</a>-aineistosta (postinumeroalueen taloudet, asukkaat ja vuokralla asuvat; vuodet 2019→2024). Kunnan kysyntä tulee <a href="https://pxdata.stat.fi/PxWeb/pxweb/fi/StatFin/StatFin__vaenn/statfin_vaenn_pxt_14wx.px/" target="_blank" rel="noopener">väestöennusteesta 2024</a> ja asuntokuntatilastosta <a href="https://pxdata.stat.fi/PxWeb/pxweb/fi/StatFin/StatFin__asku/statfin_asku_pxt_15fd.px/" target="_blank" rel="noopener">15fd</a>.</li>
+              <li><b>Tarjonta</b> = uudisrakennukset, joiden käyttötarkoitus on kerrostalo tai pientalo ja huoneistoja on yli 0. Laajennukset näkyvät listassa, mutta niitä ei lasketa mukaan. Muutostyöt on rajattu pois.</li>
+              <li><b>Valmistumisarvio:</b> Rakenteilla olevalle hankkeelle aloitus + kunnan mediaanirakennusaika. Luvitetulle hankkeelle lupapäätös + kunnan mediaaniviive + rakennusaika, painotettuna kunnan toteutumisasteella (3–6 v sitten luvitetuista asunnoista aloitettu osuus). Yli 48 kk vanhat aloittamattomat luvat ovat epävarmoja, eikä niitä lasketa mukaan.</li>
+              <li><b>Paikallinen tarjonta vs. kysyntä:</b> Tarjonta = seuraavan 36 kk valmistumiset vuodessa / nykyinen asuntokanta säteellä. Kysyntä = postinumeroalueen talouksien määrän kasvu vuodessa 2019→2024 (Paavo). Suhde 2× tarkoittaa, että lähialueen asuntokanta kasvaa kaksi kertaa niin nopeasti kuin alueen taloudet ovat lisääntyneet.</li>
+              <li><b>Riskipisteet (0–100):</b> paine 40 p + seuraavan 24 kk kilpailevat asunnot suhteessa kohteen asuntoihin 25 p + asuntokokojen osuma 20 p + alle 6 kk päähän valmistuvat 15 p. Taso: ≥ 60 korkea, 35–59 kohonnut, alle 35 matala.</li>
+              <li><b>Asuntokokojen osuma:</b> hankkeen keskimääräinen asuntokoko (huoneistoala / asunnot) poikkeaa kohteen keskikoosta enintään ±12 m².</li>
+              <li><b>Muutokset:</b> Päivämäärien perusteella näytetään uudet lupapäätökset, aloitukset ja valmistumiset valitulta jaksolta. Lisäksi näytetään tilamuutokset, jotka on havaittu edellisestä tarkistuksesta tässä selaimessa.</li>
+              <li><b>Lisenssit ja lähdemerkinnät:</b> Lähde: Suomen ympäristökeskus (Syke), Ryhti (<a href="https://www.syke.fi/en/environmental-data/use-license-and-responsibilities" target="_blank" rel="noopener">CC BY 4.0</a>). Lähde: Tilastokeskus (<a href="https://stat.fi/fi/tietoa-meista/tutustu-tilastokeskukseen/lainsaadanto/kayttoehdot" target="_blank" rel="noopener">CC BY 4.0</a>). Kaavat: Helsingin, Vantaan ja Espoon kaupungit. Karttapohja © OpenStreetMapin tekijät. Sivu ei tallenna mitään palvelimelle: kohdelista, välimuisti ja Clauden API-avain pysyvät vain tässä selaimessa.</li>
+              <li><b>Rajoitteet:</b> Ryhdin kattavuus riippuu kuntien tiedonsiirrosta. Data ei kerro, onko kohde vuokra- vai omistusasuntokohde. Paavo on postinumerotasoista ja kuvaa mennyttä kehitystä.</li>
             </ul>
           </details>
         </div>
@@ -317,9 +374,21 @@ details.method li{margin:3px 0}
   </main>
 </div>
 
-<!-- ===== Claude-paneeli ===== -->
+<!-- Portfolion tuonti -->
+<dialog id="pf-dlg">
+  <div class="dh">Portfolio</div>
+  <div class="db">
+    <div class="note">Valitse JSON-tiedosto tai liitä sen sisältö. Lista tallennetaan vain tähän selaimeen.</div>
+    <input type="file" id="pf-file" accept=".json,application/json">
+    <textarea id="pf-text" placeholder='{"kohteet":[...]}'></textarea>
+    <div class="note" id="pf-info"></div>
+  </div>
+  <div class="df"><button class="btn" id="pf-clear">Poista portfolio</button><button class="btn" id="pf-cancel">Peruuta</button><button class="btn pri" id="pf-ok">Tallenna</button></div>
+</dialog>
+
+<!-- Claude-paneeli -->
 <aside class="ai" id="ai">
-  <div class="ai-h"><h3>✦ Claude</h3><span class="note" id="ai-ctx">ei kohdetta</span>
+  <div class="ai-h"><h3>✦ Claude</h3><span class="note" id="ai-ctx"></span>
     <button class="btn sm" id="ai-cfg" title="API-asetukset">⚙</button>
     <button class="btn sm x" id="ai-close">✕</button></div>
   <div class="ai-b" id="ai-b">
@@ -328,21 +397,18 @@ details.method li{margin:3px 0}
       <input id="ai-key" type="password" placeholder="sk-ant-…">
       <label>Malli</label>
       <input id="ai-model" value="claude-sonnet-5-5">
-      <div class="note">Avain tallentuu vain tämän selaimen paikalliseen muistiin, ja kutsut menevät suoraan Anthropicille. Ilman avainta voit kopioida kysymyksen ja datan leikepöydälle ja liittää ne claude.ai:hin.</div>
+      <div class="note">Avain tallentuu vain tämän selaimen muistiin, ja kutsut menevät suoraan Anthropicille. Ilman avainta voit kopioida kysymyksen ja datan claude.ai:hin.</div>
       <div style="display:flex;gap:6px"><button class="btn sm" id="ai-save">Tallenna</button><button class="btn sm" id="ai-del">Poista avain</button></div>
     </div>
     <div class="presets" id="presets">
-      <button class="btn" data-p="Tulkitse tämän osoitteen tarjontapaine: kuinka paljon kilpailevaa uutta asuntotarjontaa on tulossa, milloin, ja miten se suhteutuu kunnan väestöennusteen mukaiseen kysyntään? Nosta 2–3 tärkeintä havaintoa ja niiden vaikutus vuokraukseen (käyttöaste, uusvuokrausvuokrat).">Tulkitse tarjontapaine</button>
-      <button class="btn" data-p="Mitkä listan hankkeet ovat todennäköisimmin suoria kilpailijoita vuokra-asunnoille (koko, valmistumisajankohta, sijainti)? Perustele lyhyesti ja kerro mitä kannattaisi tarkistaa (esim. onko kohde vuokra- vai omistusasuntokohde).">Suorimmat kilpailijat</button>
-      <button class="btn" data-p="Kirjoita sijoituskomitealle 4–6 virkkeen tilannekuva tämän sijainnin tarjonta–kysyntä-tasapainosta. Käytä lukuja ja mainitse datan rajoitteet yhdellä lauseella.">Tilannekuva komitealle</button>
+      <button class="btn" data-p="Mihin kohteisiin pitää varautua seuraavan 6–12 kk aikana kilpailevan uuden tarjonnan takia? Nosta 3–5 tärkeintä, perustele luvuilla (asunnot, valmistumisaika, etäisyys, asuntokokojen osuma) ja ehdota konkreettinen varautumistoimi (esim. vuokrasopimusten ajoitus, kampanja, hinnoittelu).">Mihin pitää varautua?</button>
+      <button class="btn" data-p="Tulkitse paikallisen tarjonnan ja paikallisen kysynnän suhde: missä tarjonta kasvaa selvästi kysyntää nopeammin ja mitä se tarkoittaa käyttöasteelle ja uusvuokrausvuokrille? Erottele tunnetut hankkeet ja epävarmat luvat.">Tarjonta vs. kysyntä</button>
+      <button class="btn" data-p="Kirjoita sijoituskomitealle 4–6 virkkeen tilannekuva tarjontariskistä. Käytä lukuja ja mainitse datan rajoitteet yhdellä lauseella.">Tilannekuva komitealle</button>
     </div>
   </div>
   <div class="ai-f">
-    <textarea id="ai-in" placeholder="Kysy tarjonnasta, hankkeista tai kysynnästä…"></textarea>
-    <div style="display:flex;gap:6px">
-      <button class="btn pri" id="ai-send">Lähetä</button>
-      <button class="btn" id="ai-copy" title="Kopioi kysymys ja data leikepöydälle">Kopioi Claudelle</button>
-    </div>
+    <textarea id="ai-in" placeholder="Kysy hankkeista, kohteista tai kysynnästä…"></textarea>
+    <div style="display:flex;gap:6px"><button class="btn pri" id="ai-send">Lähetä</button><button class="btn" id="ai-copy" title="Kopioi kysymys ja data">Kopioi Claudelle</button></div>
   </div>
 </aside>
 <div class="toast" id="toast" role="status"></div>
@@ -351,65 +417,70 @@ details.method li{margin:3px 0}
 "use strict";
 // ======================= Asetukset =======================
 const RYHTI = 'https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/';
+const RYHTI_PERMIT = 'https://paikkatiedot.ymparisto.fi/geoserver/ryhti_permit/ogc/features/v1/collections/';
+const RYHTI_PLAN = 'https://paikkatiedot.ymparisto.fi/geoserver/ryhti_plan/ogc/features/v1/collections/';
 const PX = 'https://pxdata.stat.fi/PxWeb/api/v1/fi/StatFin/';
-const HIST_FROM = 2015;                    // historian alku
-const STALE_MONTHS = 48;                   // aloittamaton lupa vanhempi kuin tämä => epävarma
+const PAAVO = 'https://geo.stat.fi/geoserver/postialue/wfs';
+const HIST_FROM = 2015, STALE_MONTHS = 48, SIZE_TOL = 12;
 const NEW = 'Uusi rakennus tai rakennelma', EXT = 'Laajentaminen';
 const RES_TYPES = ['Kerrostalo', 'Pientalo'];
-const CACHE_TTL = 7 * 864e5;
-const NOW = new Date();
-const NOW_Y = NOW.getFullYear();
+const NOW = new Date(), NOW_Y = NOW.getFullYear();
 const YEARS = []; for (let y = HIST_FROM; y <= NOW_Y + 6; y++) YEARS.push(y);
-
-const S = { q: '', label: '', lat: null, lon: null, r: 500, kunta: null, kuntaName: '', geoSource: '',
-  local: [], stock: null, kuntaRows: null, A: null, demand: null, sel: null };
+const TTL = { kunta: 7 * 864e5, px: 7 * 864e5, plans: 864e5, paavo: 30 * 864e5, local: 12 * 36e5 };
+const PAAVO_Y0 = 2021, PAAVO_Y1 = 2026;   // Paavo-vuosikerrat: väestö 31.12.2019 ja 31.12.2024
 
 // ======================= Apurit =======================
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('fi-FI');
 const n0 = v => v == null || isNaN(v) ? '–' : nf.format(Math.round(v));
-const n1 = v => v == null || isNaN(v) ? '–' : v.toLocaleString('fi-FI', {minimumFractionDigits:1, maximumFractionDigits:1});
-const pct = v => v == null || !isFinite(v) ? '–' : (v * 100).toLocaleString('fi-FI', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' %';
+const n1 = v => v == null || isNaN(v) ? '–' : v.toLocaleString('fi-FI', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const pct = v => v == null || !isFinite(v) ? '–' : (v * 100).toLocaleString('fi-FI', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
+const spct = v => v == null || !isFinite(v) ? '–' : (v > 0 ? '+' : '') + pct(v);
 const d = s => s ? new Date(String(s).slice(0, 10) + 'T00:00:00') : null;
-const fmtD = x => x ? `${x.getDate()}.${x.getMonth()+1}.${x.getFullYear()}` : '';
-const fmtM = x => x ? `${x.getMonth()+1}/${x.getFullYear()}` : '';
+const fmtD = x => x ? `${x.getDate()}.${x.getMonth() + 1}.${x.getFullYear()}` : '';
+const fmtM = x => x ? `${x.getMonth() + 1}/${x.getFullYear()}` : '';
 const addM = (x, m) => { const r = new Date(x); r.setMonth(r.getMonth() + Math.round(m)); return r; };
+const addD = (x, n) => new Date(+x + n * 864e5);
 const monthsBetween = (a, b) => (b - a) / 864e5 / 30.44;
-const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2; };
+const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
-                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } } };
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const cacheGet = (k, ttl) => { const c = store.get(k); return c && Date.now() - c.t < ttl ? c.v : null; };
+const cacheSet = (k, v) => { if (!store.set(k, { t: Date.now(), v })) { pruneCache(); store.set(k, { t: Date.now(), v }); } };
+function pruneCache() { try { Object.keys(localStorage).filter(k => k.startsWith('sm_c_local_')).forEach(k => localStorage.removeItem(k)); } catch (e) {} }
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371000, t = Math.PI / 180;
-  const a = Math.sin((lat2-lat1)*t/2)**2 + Math.cos(lat1*t)*Math.cos(lat2*t)*Math.sin((lon2-lon1)*t/2)**2;
+  const a = Math.sin((lat2 - lat1) * t / 2) ** 2 + Math.cos(lat1 * t) * Math.cos(lat2 * t) * Math.sin((lon2 - lon1) * t / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 const isRes = k => RES_TYPES.includes(k);
-
-// ---- status-rivi ----
+const rr = r => r < 1000 ? r + ' m' : r / 1000 + ' km';
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1800); }
 const ST = {};
-function status(key, state, txt) { ST[key] = {state, txt}; renderStatus(); }
-function renderStatus() {
-  $('#status').innerHTML = Object.entries(ST).map(([k, v]) =>
-    `<span class="${v.state}">${v.state === 'run' ? '<span class="spin"></span> ' : v.state === 'ok' ? '✓ ' : '✕ '}${esc(v.txt)}</span>`).join('');
-}
+function status(key, state, txt) { if (state === null) delete ST[key]; else ST[key] = { state, txt }; $('#status').innerHTML = Object.values(ST).map(v => `<span class="${v.state}">${v.state === 'run' ? '<span class="spin"></span> ' : v.state === 'ok' ? '✓ ' : '✕ '}${esc(v.txt)}</span>`).join(''); }
+function clearStatus() { Object.keys(ST).forEach(k => delete ST[k]); status('x', null); }
+async function pool(items, n, fn) { const out = new Array(items.length); let i = 0; await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const j = i++; try { out[j] = await fn(items[j], j); } catch (e) { out[j] = { error: e.message }; } } })); return out; }
 
-// ======================= Datahaut =======================
+// ======================= Verkko =======================
 const NET_HINT = () => location.protocol === 'file:'
-  ? 'Selain esti datahaun, koska sivu on avattu tiedostona. Safari estää tämän oletuksena: avaa tiedosto Chromessa (vedä index.html Chrome-ikkunaan) tai käytä julkaistua linkkiä.'
+  ? 'Selain esti datahaun, koska sivu on avattu tiedostona. Safari estää tämän oletuksena: avaa tiedosto Chromessa tai käytä julkaistua linkkiä.'
   : 'Datalähde ei vastannut. Tarkista verkkoyhteys ja yritä uudelleen.';
-async function safeFetch(url, opts = {}, ms = 60000) {
+async function safeFetch(url, opts = {}, ms = 90000) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
   try { return await fetch(url, { ...opts, signal: ctl.signal }); }
-  catch (e) { throw new Error(e.name === 'AbortError' ? 'Datalähde ei vastannut minuutissa – yritä uudelleen.' : NET_HINT()); }
+  catch (e) { throw new Error(e.name === 'AbortError' ? 'Datalähde ei vastannut ajoissa – yritä uudelleen.' : NET_HINT()); }
   finally { clearTimeout(t); }
 }
-async function ryhti(coll, filter, { bbox, limit = 5000 } = {}) {
-  let url = `${RYHTI}${coll}/items?f=application/geo%2Bjson&limit=${limit}&filter-lang=cql-text&filter=${encodeURIComponent(filter)}`;
+async function ogc(base, coll, filter, { bbox, limit = 3000 } = {}) {
+  let url = `${base}${coll}/items?f=application/geo%2Bjson&limit=${limit}` + (filter ? `&filter-lang=cql-text&filter=${encodeURIComponent(filter)}` : '');
   if (bbox) url += `&bbox=${bbox.map(v => v.toFixed(6)).join(',')}`;
   const feats = []; let guard = 0;
-  while (url && guard++ < 20) {
+  while (url && guard++ < 30) {
     const r = await safeFetch(url);
     if (!r.ok) throw new Error(`Ryhti ${coll}: HTTP ${r.status}`);
     const j = await r.json();
@@ -419,27 +490,35 @@ async function ryhti(coll, filter, { bbox, limit = 5000 } = {}) {
   }
   return feats;
 }
-function bboxAround(lat, lon, r) {
-  const dl = r * 1.15 / 111320, dn = r * 1.15 / (111320 * Math.cos(lat * Math.PI / 180));
-  return [lon - dn, lat - dl, lon + dn, lat + dl];
+const ryhti = (coll, f, o) => ogc(RYHTI, coll, f, o);
+function bboxAround(lat, lon, r) { const dl = r * 1.15 / 111320, dn = r * 1.15 / (111320 * Math.cos(lat * Math.PI / 180)); return [lon - dn, lat - dl, lon + dn, lat + dl]; }
+async function px(table, query) {
+  const r = await safeFetch(PX + table, { method: 'POST', body: JSON.stringify({ query, response: { format: 'json-stat2' } }) });
+  if (!r.ok) throw new Error(`Tilastokeskus ${table}: HTTP ${r.status}`);
+  return r.json();
 }
+function jsGet(js, sel) { let idx = 0, stride = 1; for (let i = js.id.length - 1; i >= 0; i--) { const dim = js.id[i], cat = js.dimension[dim].category.index; idx += (sel[dim] != null ? cat[sel[dim]] : 0) * stride; stride *= js.size[i]; } return js.value[idx]; }
+
+// ======================= Normalisointi =======================
 function norm(f) {
-  const p = f.properties, c = f.geometry && f.geometry.coordinates;
+  const p = f.properties, c = f.geometry && f.geometry.coordinates, apts = p.huoneistojen_lukumaara || 0;
   return { id: p.rakennusavain, lupa: p.pysyva_lupatunnus, kiint: p.sijaintikiinteisto, kunta: p.kuntanumero,
     laji: p.toimenpiteen_laji, tila: p.toimenpiteen_tila, kaytto: p.paaasiallinen_kayttotarkoitus || '–',
-    apts: p.huoneistojen_lukumaara || 0, ka: p.kerrosala, ha: p.huoneistoala, krs: p.kerrosluku,
+    apts, ka: p.kerrosala, ha: p.huoneistoala, krs: p.kerrosluku, m2: apts > 0 && p.huoneistoala > 0 ? p.huoneistoala / apts : null,
     paatos: d(p.paatospaivamaara), aloitus: d(p.aloittamispaivamaara), valmis: d(p.valmistumispaivamaara),
-    rauk: d(p.raukeamispaivamaara), jatko: d(p.rakennustyot_aloitettava_jatkoa_asti),
-    lon: c ? +c[0] : null, lat: c ? +c[1] : null };
+    jatko: d(p.rakennustyot_aloitettava_jatkoa_asti), lon: c ? +c[0] : null, lat: c ? +c[1] : null };
 }
 const PROJ_FILTER = `toimenpiteen_laji IN ('${NEW}','${EXT}') AND (paatospaivamaara>='${HIST_FROM}-01-01' OR valmistumispaivamaara>='${HIST_FROM}-01-01')`;
+const packP = p => [p.id, p.tila, p.laji === NEW ? 1 : 0, p.kaytto, p.apts, p.ka || 0, p.ha || 0, p.krs || 0, ...[p.paatos, p.aloitus, p.valmis, p.jatko].map(x => x ? x.toISOString().slice(0, 10) : 0), p.lat, p.lon, p.kiint || '', p.lupa || ''];
+const packK = p => [p.tila, p.laji === NEW ? 1 : 0, p.kaytto, p.apts, ...[p.paatos, p.aloitus, p.valmis, p.jatko].map(x => x ? x.toISOString().slice(0, 10) : 0)];
+const unpackK = a => ({ tila: a[0], laji: a[1] ? NEW : EXT, kaytto: a[2], apts: a[3], paatos: d(a[4] || null), aloitus: d(a[5] || null), valmis: d(a[6] || null), jatko: d(a[7] || null) });
+const unpackP = a => { const p = { id: a[0], tila: a[1], laji: a[2] ? NEW : EXT, kaytto: a[3], apts: a[4], ka: a[5] || null, ha: a[6] || null, krs: a[7] || null, paatos: d(a[8] || null), aloitus: d(a[9] || null), valmis: d(a[10] || null), jatko: d(a[11] || null), lat: a[12], lon: a[13], kiint: a[14], lupa: a[15] }; p.m2 = p.apts > 0 && p.ha > 0 ? p.ha / p.apts : null; return p; };
 
-// ---- osoitehaku: Ryhti open_address ensin, Nominatim varalla ----
-// Google Maps / Apple Maps / OSM -linkit -> koordinaatit tai paikan nimi
+// ======================= Osoitehaku =======================
 function parseMapLink(q) {
   if (!/^https?:\/\//i.test(q.trim()) && !/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(q)) return null;
   let s = q.trim(); try { s = decodeURIComponent(s); } catch (e) {}
-  if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(s)) return { error: 'Google Mapsin lyhytlinkkiä (maps.app.goo.gl) ei voi avata selaimesta. Avaa linkki, kopioi osoiterivin pitkä linkki tai klikkaa kartalla hiiren oikealla ja kopioi koordinaatit.' };
+  if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(s)) return { error: 'Google Mapsin lyhytlinkkiä (maps.app.goo.gl) ei voi avata selaimesta. Avaa linkki ja kopioi osoiterivin pitkä linkki, tai klikkaa kartalla hiiren oikealla ja kopioi koordinaatit.' };
   const pats = [/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/, /[?&](?:q|query|ll|sll|daddr|destination|center)=(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/, /[#&]map=\d+\/(-?\d+\.\d+)\/(-?\d+\.\d+)/, /[?&]mlat=(-?\d+\.\d+)&mlon=(-?\d+\.\d+)/];
   for (const p of pats) { const m = s.match(p); if (m) return { lat: +m[1], lon: +m[2] }; }
   const place = s.match(/\/maps\/place\/([^\/@?]+)/) || s.match(/[?&](?:q|query|address)=([^&]+)/);
@@ -448,11 +527,7 @@ function parseMapLink(q) {
 }
 async function geocode(q) {
   const link = parseMapLink(q);
-  if (link) {
-    if (link.error) throw new Error(link.error);
-    if (link.text) q = link.text;
-    else return { lat: link.lat, lon: link.lon, label: `${link.lat.toFixed(5)}, ${link.lon.toFixed(5)}`, kunta: null, src: 'karttalinkki' };
-  }
+  if (link) { if (link.error) throw new Error(link.error); if (link.text) q = link.text; else return { lat: link.lat, lon: link.lon, label: `${link.lat.toFixed(5)}, ${link.lon.toFixed(5)}`, kunta: null, src: 'karttalinkki' }; }
   const ll = q.match(/^\s*(-?\d{1,2}\.\d+)\s*[,; ]\s*(-?\d{1,3}\.\d+)\s*$/);
   if (ll) return { lat: +ll[1], lon: +ll[2], label: `${(+ll[1]).toFixed(5)}, ${(+ll[2]).toFixed(5)}`, kunta: null, src: 'koordinaatit' };
   const m = q.match(/^\s*([^\d,]+?)\s+(\d+)\s*([a-zåäö])?\b[^,]*(?:,\s*(?:\d{5}\s*)?([^,]+))?\s*$/i);
@@ -466,536 +541,687 @@ async function geocode(q) {
         const offices = [...new Set(feats.map(x => x.properties.postal_office_fin))];
         let pick = feats.filter(x => x.properties.postal_office_fin === offices[0]);
         if (letter) { const L = pick.filter(x => (x.properties.subdivision_letter_of_address_number || '').toLowerCase() === letter); if (L.length) pick = L; }
-        const lat = pick.reduce((s, x) => s + x.geometry.coordinates[1], 0) / pick.length;
-        const lon = pick.reduce((s, x) => s + x.geometry.coordinates[0], 0) / pick.length;
-        const p = pick[0].properties;
-        const title = s => s.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase());
-        return { lat, lon, kunta: p.municipality_number,
-          label: `${m[1].trim()} ${num}${letter ? ' ' + letter.toUpperCase() : ''}, ${p.postal_code} ${title(p.postal_office_fin)}`,
+        const p = pick[0].properties, title = s => s.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase());
+        return { lat: pick.reduce((s, x) => s + x.geometry.coordinates[1], 0) / pick.length, lon: pick.reduce((s, x) => s + x.geometry.coordinates[0], 0) / pick.length,
+          kunta: p.municipality_number, postal: p.postal_code, label: `${m[1].trim()} ${num}${letter ? ' ' + letter.toUpperCase() : ''}, ${p.postal_code} ${title(p.postal_office_fin)}`,
           src: 'Ryhti-osoite', alt: offices.length > 1 ? offices.slice(1).map(title) : [] };
       }
-    } catch (e) { if (e.message === NET_HINT()) throw e; console.warn('[TM] osoite Ryhti', e); }
+    } catch (e) { if (e.message === NET_HINT()) throw e; console.warn('[SM] osoite', e); }
   }
   let j = [];
-  try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=fi&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`);
-    j = await r.json();
-  } catch (e) { throw new Error(NET_HINT()); }
+  try { j = await (await safeFetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=fi&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`)).json(); }
+  catch (e) { throw new Error(NET_HINT()); }
   if (!j.length) throw new Error(`Osoitetta "${q}" ei löytynyt`);
-  return { lat: +j[0].lat, lon: +j[0].lon, kunta: null, label: j[0].display_name.split(',').slice(0, 3).join(','), src: 'OpenStreetMap' };
+  return { lat: +j[0].lat, lon: +j[0].lon, kunta: null, postal: (j[0].address || {}).postcode || null, label: j[0].display_name.split(',').slice(0, 3).join(','), src: 'OpenStreetMap' };
 }
 
-// ---- kunnan hankkeet (välimuistiin, kompakti) ----
-async function kuntaRows(code, force) {
-  const key = 'tm_kunta_v1_' + code, c = store.get(key);
-  if (!force && c && Date.now() - c.t < CACHE_TTL) return { rows: c.rows.map(unpack), cached: c.t };
-  const feats = await ryhti('avoimet_lupa_rakennukset', `kuntanumero='${code}' AND ${PROJ_FILTER}`, { limit: 20000 });
-  const rows = feats.map(norm);
-  store.set(key, { t: Date.now(), rows: rows.map(pack) });
-  return { rows, cached: null };
-}
-const pack = p => [p.tila, p.laji === NEW ? 1 : 0, p.kaytto, p.apts, ...[p.paatos, p.aloitus, p.valmis, p.jatko].map(x => x ? x.toISOString().slice(0, 10) : 0)];
-const unpack = a => ({ tila: a[0], laji: a[1] ? NEW : EXT, kaytto: a[2], apts: a[3], paatos: d(a[4] || null), aloitus: d(a[5] || null), valmis: d(a[6] || null), jatko: d(a[7] || null) });
-
-// ---- Tilastokeskus PxWeb (json-stat2) ----
-async function px(table, query) {
-  const r = await safeFetch(PX + table, { method: 'POST', body: JSON.stringify({ query, response: { format: 'json-stat2' } }) });
-  if (!r.ok) throw new Error(`Tilastokeskus ${table}: HTTP ${r.status}`);
-  return r.json();
-}
-function jsGet(js, sel) {
-  let idx = 0, stride = 1;
-  for (let i = js.id.length - 1; i >= 0; i--) {
-    const dim = js.id[i], cat = js.dimension[dim].category.index;
-    const pos = sel[dim] != null ? cat[sel[dim]] : 0;
-    idx += pos * stride; stride *= js.size[i];
-  }
-  return js.value[idx];
+// ======================= Kuntataso (välimuistissa) =======================
+const kuntaP = {};
+function kuntaCtx(code, force) {
+  if (!force && kuntaP[code]) return kuntaP[code];
+  return kuntaP[code] = (async () => {
+    let rows = !force && cacheGet('sm_c_kunta_' + code, TTL.kunta);
+    if (rows) rows = rows.map(unpackK);
+    else { rows = (await ryhti('avoimet_lupa_rakennukset', `kuntanumero='${code}' AND ${PROJ_FILTER}`, { limit: 3000 })).map(norm); cacheSet('sm_c_kunta_' + code, rows.map(packK)); }
+    const A = assumptions(rows); rows.forEach(p => p.e = expected(p, A));
+    let D = !force && cacheGet('sm_c_px_' + code, TTL.px);
+    if (!D) { try { D = await demandData(code); cacheSet('sm_c_px_' + code, D); } catch (e) { D = null; } }
+    const M = D ? demandStats(D) : null, K = kuntaStats(rows, A);
+    return { code, rows, A, D, M, K, name: D ? D.name : code };
+  })().catch(e => { delete kuntaP[code]; throw e; });
 }
 async function demandData(code) {
-  const KU = 'KU' + code;
-  const ages = []; for (let a = 20; a <= 34; a++) ages.push(String(a).padStart(3, '0'));
+  const KU = 'KU' + code, ages = []; for (let a = 20; a <= 34; a++) ages.push(String(a).padStart(3, '0'));
   const [pop, hh] = await Promise.all([
-    px('vaenn/14wx.px', [
-      { code: 'alue_23_20240101', selection: { filter: 'item', values: [KU] } },
-      { code: 'sukupuoli_9_20180101', selection: { filter: 'item', values: ['SSS'] } },
-      { code: 'ikaryhma_10_20180101', selection: { filter: 'item', values: ['SSS', ...ages] } }]),
-    px('asku/15fd.px', [
-      { code: 'alue_23_20260101', selection: { filter: 'item', values: [KU] } },
-      { code: 'timeperiod_y', selection: { filter: 'item', values: ['2015', '2025'] } },
-      { code: 'contentscode', selection: { filter: 'item', values: ['asku-Lkm', 'asku-asuntovaestoa'] } }])
-  ]);
+    px('vaenn/14wx.px', [{ code: 'alue_23_20240101', selection: { filter: 'item', values: [KU] } }, { code: 'sukupuoli_9_20180101', selection: { filter: 'item', values: ['SSS'] } }, { code: 'ikaryhma_10_20180101', selection: { filter: 'item', values: ['SSS', ...ages] } }]),
+    px('asku/15fd.px', [{ code: 'alue_23_20260101', selection: { filter: 'item', values: [KU] } }, { code: 'timeperiod_y', selection: { filter: 'item', values: ['2015', '2025'] } }, { code: 'contentscode', selection: { filter: 'item', values: ['asku-Lkm', 'asku-asuntovaestoa'] } }])]);
   const yDim = pop.id.find(x => x.startsWith('timeperiod')), aDim = pop.id.find(x => x.startsWith('ikaryhma'));
-  const years = Object.keys(pop.dimension[yDim].category.index).sort();
-  const series = years.map(y => ({ y: +y, total: jsGet(pop, { [yDim]: y, [aDim]: 'SSS' }),
-    young: ages.reduce((s, a) => s + (jsGet(pop, { [yDim]: y, [aDim]: a }) || 0), 0) }));
-  const name = pop.dimension[pop.id[0]].category.label[KU];
+  const series = Object.keys(pop.dimension[yDim].category.index).sort().map(y => ({ y: +y, total: jsGet(pop, { [yDim]: y, [aDim]: 'SSS' }), young: ages.reduce((s, a) => s + (jsGet(pop, { [yDim]: y, [aDim]: a }) || 0), 0) }));
   const g = (y, c) => jsGet(hh, { timeperiod_y: y, contentscode: c });
-  return { name, series, ak15: g('2015', 'asku-Lkm'), av15: g('2015', 'asku-asuntovaestoa'), ak25: g('2025', 'asku-Lkm'), av25: g('2025', 'asku-asuntovaestoa') };
+  return { name: pop.dimension[pop.id[0]].category.label[KU], series, ak15: g('2015', 'asku-Lkm'), av15: g('2015', 'asku-asuntovaestoa'), ak25: g('2025', 'asku-Lkm'), av25: g('2025', 'asku-asuntovaestoa') };
 }
-
-// ======================= Mallit =======================
+function demandStats(D) {
+  const s = y => D.series.find(x => x.y === y), p25 = s(2025), p40 = s(2040); if (!p25 || !p40 || !D.ak25) return null;
+  const hs25 = D.av25 / D.ak25, hs15 = D.av15 / D.ak15, g = Math.pow(hs25 / hs15, 1 / 10) - 1, hs40 = hs25 * Math.pow(1 + g, 15);
+  const needBase = D.ak25 * (p40.total / p25.total - 1), needTrend = (D.av25 * p40.total / p25.total) / hs40 - D.ak25;
+  return { p25, p40, hs25, hs15, g, needBase, needTrend, yrBase: needBase / 15, yrTrend: needTrend / 15, rate: needBase / 15 / D.ak25, youngChg: p40.young / p25.young - 1, popChg: p40.total / p25.total - 1, ak25: D.ak25 };
+}
 function assumptions(rows) {
-  const out = {};
-  const groups = { Kerrostalo: rows.filter(p => p.kaytto === 'Kerrostalo'), Pientalo: rows.filter(p => p.kaytto === 'Pientalo') };
-  const DEF = { Kerrostalo: { lag: 6, build: 16 }, Pientalo: { lag: 4, build: 10 } };
-  const c0 = addM(NOW, -72), c1 = addM(NOW, -36);
-  for (const [k, g] of Object.entries(groups)) {
-    const res = g.filter(p => p.laji === NEW && p.apts > 0);
+  const out = {}, DEF = { Kerrostalo: { lag: 6, build: 16 }, Pientalo: { lag: 4, build: 10 } }, c0 = addM(NOW, -72), c1 = addM(NOW, -36);
+  for (const k of ['Kerrostalo', 'Pientalo']) {
+    const res = rows.filter(p => p.kaytto === k && p.laji === NEW && p.apts > 0);
     const lags = res.filter(p => p.paatos && p.aloitus && p.paatos.getFullYear() >= 2018).map(p => monthsBetween(p.paatos, p.aloitus)).filter(v => v >= 0 && v < 60);
     const builds = res.filter(p => p.aloitus && p.valmis && p.aloitus.getFullYear() >= 2016).map(p => monthsBetween(p.aloitus, p.valmis)).filter(v => v > 1 && v < 60);
-    const coh = res.filter(p => p.paatos && p.paatos >= c0 && p.paatos < c1);
-    const tot = coh.reduce((s, p) => s + p.apts, 0);
+    const coh = res.filter(p => p.paatos && p.paatos >= c0 && p.paatos < c1), tot = coh.reduce((s, p) => s + p.apts, 0);
     const started = coh.filter(p => p.aloitus || p.tila === 'Aloitettu' || p.tila === 'Valmistunut').reduce((s, p) => s + p.apts, 0);
-    out[k] = {
-      lag: lags.length >= 15 ? median(lags) : DEF[k].lag, lagN: lags.length,
-      build: builds.length >= 15 ? median(builds) : DEF[k].build, buildN: builds.length,
-      real: tot >= 50 ? started / tot : 0.8, realN: coh.length, realApts: tot
-    };
+    out[k] = { lag: lags.length >= 15 ? median(lags) : DEF[k].lag, lagN: lags.length, build: builds.length >= 15 ? median(builds) : DEF[k].build, buildN: builds.length, real: tot >= 50 ? started / tot : 0.8, realApts: tot };
   }
   return out;
 }
 function expected(p, A) {
   const a = A[p.kaytto === 'Kerrostalo' ? 'Kerrostalo' : 'Pientalo'];
   if (p.tila === 'Rauennut') return { kind: 'lapsed', w: 0, date: null };
-  if (p.valmis || p.tila === 'Valmistunut') return { kind: 'done', w: 1, date: p.valmis, est: false };
-  if (p.aloitus || p.tila === 'Aloitettu') {
-    let dt = p.aloitus ? addM(p.aloitus, a.build) : addM(NOW, a.build / 2), late = false;
-    if (dt < NOW) { dt = addM(NOW, 3); late = true; }
-    return { kind: 'uc', w: 1, date: dt, est: true, late };
-  }
-  const age = p.paatos ? monthsBetween(p.paatos, NOW) : 0;
-  const stale = age > STALE_MONTHS && !(p.jatko && p.jatko > NOW);
-  if (stale) return { kind: 'permit', w: 0, date: null, est: true, stale: true };
+  if (p.valmis || p.tila === 'Valmistunut') return { kind: 'done', w: 1, date: p.valmis };
+  if (p.aloitus || p.tila === 'Aloitettu') { let dt = p.aloitus ? addM(p.aloitus, a.build) : addM(NOW, a.build / 2), late = false; if (dt < NOW) { dt = addM(NOW, 3); late = true; } return { kind: 'uc', w: 1, date: dt, late }; }
+  const stale = (p.paatos ? monthsBetween(p.paatos, NOW) : 0) > STALE_MONTHS && !(p.jatko && p.jatko > NOW);
+  if (stale) return { kind: 'permit', w: 0, date: null, stale: true };
   const start = new Date(Math.max(p.paatos ? addM(p.paatos, a.lag) : NOW, addM(NOW, 1)));
-  return { kind: 'permit', w: a.real, date: addM(start, a.build), est: true };
+  return { kind: 'permit', w: a.real, date: addM(start, a.build) };
 }
 const supplyOK = p => p.laji === NEW && isRes(p.kaytto) && p.apts > 0;
-function timeline(rows, A) {
-  const t = { done: {}, uc: {}, permit: {} };
-  YEARS.forEach(y => { t.done[y] = 0; t.uc[y] = 0; t.permit[y] = 0; });
-  for (const p of rows) {
-    if (!supplyOK(p)) continue;
-    const e = p.e || expected(p, A);
-    if (!e.date || !e.w) continue;
-    const y = e.date.getFullYear();
-    if (t[e.kind] && y in t[e.kind]) t[e.kind][y] += p.apts * e.w;
-  }
+const active = p => supplyOK(p) && p.e && (p.e.kind === 'uc' || (p.e.kind === 'permit' && !p.e.stale));
+function timeline(rows) {
+  const t = { done: {}, uc: {}, permit: {} }; YEARS.forEach(y => { t.done[y] = 0; t.uc[y] = 0; t.permit[y] = 0; });
+  for (const p of rows) { if (!supplyOK(p) || !p.e || !p.e.date || !p.e.w) continue; const y = p.e.date.getFullYear(); if (t[p.e.kind] && y in t[p.e.kind]) t[p.e.kind][y] += p.apts * p.e.w; }
   return t;
 }
-function sumWindow(rows, A, fromM, toM) {
-  const a = addM(NOW, fromM), b = addM(NOW, toM); let s = 0, n = 0;
-  for (const p of rows) { if (!supplyOK(p)) continue; const e = p.e || expected(p, A);
-    if (e.date && e.w && e.date >= a && e.date < b && e.kind !== 'done') { s += p.apts * e.w; n++; } }
-  return { apts: s, n };
+function sumWindow(rows, fromM, toM) { const a = addM(NOW, fromM), b = addM(NOW, toM); let s = 0; for (const p of rows) if (supplyOK(p) && p.e && p.e.date && p.e.w && p.e.kind !== 'done' && p.e.date >= a && p.e.date < b) s += p.apts * p.e.w; return s; }
+function kuntaStats(rows, A) {
+  const t = timeline(rows), last5 = []; for (let y = NOW_Y - 5; y < NOW_Y; y++) last5.push(t.done[y] || 0);
+  return { t, avg5: last5.reduce((a, b) => a + b, 0) / 5, uc: rows.filter(p => supplyOK(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0), permW: rows.filter(p => supplyOK(p) && p.e.kind === 'permit').reduce((s, p) => s + p.apts * p.e.w, 0), next3: sumWindow(rows, 0, 36) / 3 };
 }
 
-// ======================= Kartta =======================
-let map, layerG, circle, pin;
-const markers = {};
-function initMap() {
-  map = L.map('map', { zoomControl: true, scrollWheelZoom: true }).setView([60.19, 24.95], 12);
-  if (location.protocol === 'file:') {   // OSM estää tiilet ilman Referer-otsaketta -> Esri, kun sivu avataan tiedostona
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 16, attribution: 'Pohjakartta © Esri, HERE, Garmin, © OpenStreetMap · hankkeet Ryhti / SYKE' }).addTo(map);
-  } else {
-    document.getElementById('map').classList.add('osm-tiles');
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMapin tekijät</a> · hankkeet Ryhti / SYKE' }).addTo(map);
-  }
-  map.on('click', e => {
-    const { lat, lng } = e.latlng, q = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-    const div = document.createElement('div'); div.className = 'mappop';
-    div.innerHTML = `<div>${q}</div><button class="btn sm pri">Hae tästä pisteestä</button>`;
-    div.querySelector('button').onclick = () => { map.closePopup(); convo = []; run(q, +$('#radius').value); };
-    L.popup().setLatLng(e.latlng).setContent(div).openOn(map);
-  });
-  layerG = L.layerGroup().addTo(map);
+// ======================= Paavo (paikallinen kysyntä) =======================
+async function paavo(lat, lon) {
+  const key = 'sm_c_paavo_' + lat.toFixed(3) + '_' + lon.toFixed(3), c = cacheGet(key, TTL.paavo); if (c) return c;
+  const get = async y => { const b = [lon - 0.0002, lat - 0.0001, lon + 0.0002, lat + 0.0001].join(','); const u = `${PAAVO}?service=WFS&version=2.0.0&request=GetFeature&typeNames=postialue:pno_tilasto_${y}&outputFormat=application/json&srsName=EPSG:4326&bbox=${b},EPSG:4326`; const j = await (await safeFetch(u)).json(); const p = j.features && j.features[0] && j.features[0].properties; return p ? { pc: p.postinumeroalue, name: p.nimi, pop: p.he_vakiy, hh: p.te_taly, rent: p.te_vuok_as, dw: p.ra_asunn, m2: p.ra_as_kpa, young: (p.he_20_24 || 0) + (p.he_25_29 || 0) + (p.he_30_34 || 0), single: p.te_yks } : null; };
+  const [a, b] = await Promise.all([get(PAAVO_Y0), get(PAAVO_Y1)]);
+  if (!a || !b) return null;
+  const valid = v => v != null && v > 0;
+  const g = (x, y) => valid(x) && valid(y) ? Math.pow(y / x, 1 / 5) - 1 : null;
+  const out = { pc: b.pc, name: b.name, y0: a, y1: b, hhRate: g(a.hh, b.hh), popRate: g(a.pop, b.pop), dwRate: g(a.dw, b.dw), youngRate: g(a.young, b.young), rentShare: valid(b.hh) && b.rent >= 0 ? b.rent / b.hh : null };
+  cacheSet(key, out); return out;
 }
+
+// ======================= Kaavat =======================
+const plansP = {};
+const ringCentroid = coords => { let flat = coords; while (Array.isArray(flat[0]) && Array.isArray(flat[0][0])) flat = flat[0]; const n = flat.length; return [flat.reduce((s, c) => s + c[0], 0) / n, flat.reduce((s, c) => s + c[1], 0) / n]; };
+function plansFor(kunta, force) {
+  const key = 'sm_c_plans_' + kunta;
+  if (!force && plansP[kunta]) return plansP[kunta];
+  return plansP[kunta] = (async () => {
+    const c = !force && cacheGet(key, TTL.plans); if (c) return c;
+    let out = [];
+    const wfs = async (base, type) => { const j = await (await safeFetch(`${base}?service=WFS&version=2.0.0&request=GetFeature&typeNames=${type}&outputFormat=application/json&srsName=EPSG:4326`)).json(); return j.features || []; };
+    if (kunta === '091') out = (await wfs('https://kartta.hel.fi/ws/geoserver/avoindata/wfs', 'avoindata:Kaavahakemisto_alue_kaava_vireilla')).map(f => { const p = f.properties, [x, y] = ringCentroid(f.geometry.coordinates); return { src: 'Helsinki', id: 'hki-' + p.kaavatunnus, name: 'Asemakaava ' + p.kaavatunnus, stage: p.hyvaksymispvm || p.luokka, date: p.muokkauspvm || p.luontipvm, link: 'https://www.google.com/search?q=' + encodeURIComponent('Helsinki asemakaava ' + p.kaavatunnus), lon: x, lat: y, rad: Math.sqrt((p.pintaala || 0) / Math.PI) }; });
+    else if (kunta === '092') out = (await wfs('https://gis.vantaa.fi/geoserver/wfs', 'kaava:kaavat_vireilla')).map(f => { const p = f.properties, [x, y] = ringCentroid(f.geometry.coordinates), dt = String(p.kasit_pvm || p.oas_pvm || ''); return { src: 'Vantaa', id: 'van-' + p.kaavatunnus, name: (p.kaavanimi1 || 'Asemakaava') + ' (' + p.kaavatunnus + ')', stage: p.vaihe, date: dt.length === 8 ? `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6)}` : dt, link: p.kaavalinkki, lon: x, lat: y, rad: 150 }; });
+    else if (kunta === '049') {
+      const t = await (await safeFetch('https://kartat.espoo.fi/teklaogcweb/wfs.ashx?service=WFS&version=1.1.0&request=GetFeature&typeName=GIS:Kaavoitushankkeet&maxFeatures=3000&srsName=EPSG:4326')).text();
+      const doc = new DOMParser().parseFromString(t, 'text/xml');
+      for (const el of doc.getElementsByTagName('*')) {
+        if (el.localName !== 'Kaavoitushankkeet') continue;
+        const g = n => { const x = [...el.getElementsByTagName('*')].find(e => e.localName === n); return x ? x.textContent.trim() : ''; };
+        const pos = g('pos').split(/\s+/).map(Number); if (pos.length < 2) continue;
+        const [a, b] = pos, lon = a < 40 ? a : b, lat = a < 40 ? b : a;
+        if (/lainvoim/i.test(g('Kaavatilanne'))) continue;
+        out.push({ src: 'Espoo', id: 'esp-' + g('Kaavatunnus'), name: (g('KaavanNimi') || g('KaavanTyonimi') || 'Kaava') + ' (' + g('Kaavatunnus') + ')', stage: g('ViimeinenVaihe') && g('ViimeinenVaihe') !== '0' ? g('ViimeinenVaihe') : g('Kaavatilanne'), date: (g('ViimVaihePvmXML') || g('ViimVaihePvm') || '').slice(0, 10), link: g('wwwFi'), lon, lat, rad: 150 });
+      }
+    } else {
+      try { const f = await ogc(RYHTI_PLAN, 'pub_prep_ld_plan_ix_gs', `administrative_area_identifiers LIKE '%${kunta}%'`, { limit: 500 }); out = f.filter(x => x.geometry).map(x => { const p = x.properties, [lo, la] = ringCentroid(x.geometry.coordinates); return { src: 'Ryhti', id: 'ryhti-' + p.plan_key, name: p.name_fin || 'Asemakaava', stage: p.plan_life_cycle_status, date: p.time_of_initiation, link: '', lon: lo, lat: la, rad: 150 }; }); } catch (e) { out = []; }
+    }
+    cacheSet(key, out); return out;
+  })().catch(e => { delete plansP[kunta]; throw e; });
+}
+const planSupported = k => ['091', '092', '049'].includes(k);
+
+// ======================= Lupahankkeiden osoitteet =======================
+async function permitAddresses(keys) {
+  const out = {}, uniq = [...new Set(keys)].filter(Boolean);
+  for (let i = 0; i < uniq.length; i += 40) {
+    const part = uniq.slice(i, i + 40);
+    try { const f = await ogc(RYHTI_PERMIT, 'open_permit_address', `building_key IN (${part.map(k => `'${k}'`).join(',')})`, { limit: 500 }); f.forEach(x => { const p = x.properties; if (!out[p.building_key]) out[p.building_key] = `${p.address_fin}${p.postal_office_fin ? ', ' + p.postal_office_fin.charAt(0) + p.postal_office_fin.slice(1).toLowerCase() : ''}`; }); } catch (e) {}
+  }
+  return out;
+}
+
+// ======================= Yhden kohteen analyysi =======================
+async function analyzeSite(site, r, { force = false, onStep } = {}) {
+  const step = t => onStep && onStep(t);
+  const ck = 'sm_c_local_' + site.lat.toFixed(5) + '_' + site.lon.toFixed(5) + '_' + r;
+  let local = !force && cacheGet(ck, TTL.local), stock, kunta = site.kunta;
+  if (local) { stock = local.stock; kunta = kunta || local.kunta; local = { rows: local.rows.map(unpackP), addr: local.addr }; }
+  else {
+    step('hankkeet');
+    const bbox = bboxAround(site.lat, site.lon, r);
+    const [pf, sf] = await Promise.all([ryhti('avoimet_lupa_rakennukset', PROJ_FILTER, { bbox, limit: 3000 }), ryhti('avoimet_rakennukset', 'huoneistojen_lukumaara>0', { bbox, limit: 3000 })]);
+    const rows = pf.map(norm).filter(p => p.lat != null && haversine(site.lat, site.lon, p.lat, p.lon) <= r);
+    const inR = sf.filter(x => x.geometry && haversine(site.lat, site.lon, x.geometry.coordinates[1], x.geometry.coordinates[0]) <= r);
+    stock = inR.filter(x => isRes(x.properties.paaasiallinen_kayttotarkoitus)).reduce((s, x) => s + (x.properties.huoneistojen_lukumaara || 0), 0);
+    if (!kunta) { const cnt = {}; inR.concat(pf).forEach(x => { const k = x.properties.kuntanumero; if (k) cnt[k] = (cnt[k] || 0) + 1; }); kunta = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || null; }
+    step('osoitteet');
+    const addr = await permitAddresses(rows.filter(p => supplyOK(p) && p.tila !== 'Valmistunut' && p.tila !== 'Rauennut').map(p => p.id));
+    local = { rows, addr };
+    cacheSet(ck, { rows: rows.map(packP), addr, stock, kunta });
+  }
+  if (!kunta) throw new Error('Kuntaa ei tunnistettu');
+  step('kunta');
+  const [kc, pv, plansAll] = await Promise.all([kuntaCtx(kunta, force), paavo(site.lat, site.lon).catch(() => null), plansFor(kunta, force).catch(() => [])]);
+  const rows = local.rows.map(p => Object.assign(p, { dist: haversine(site.lat, site.lon, p.lat, p.lon), e: expected(p, kc.A), addr: local.addr[p.id] || '' }));
+  const plans = plansAll.map(p => ({ ...p, dist: haversine(site.lat, site.lon, p.lat, p.lon) })).filter(p => p.dist - (p.rad || 0) <= r).sort((a, b) => a.dist - b.dist);
+  return derive({ site, r, rows, stock, kunta, kc, pv, plans });
+}
+function derive(R) {
+  const { rows, stock, kc, pv, site } = R;
+  const n24 = sumWindow(rows, 0, 24), n36 = sumWindow(rows, 0, 36), n6 = sumWindow(rows, 0, 6);
+  const supplyRate = stock > 0 ? (n36 / 3) / stock : null;
+  const demandRate = pv ? pv.hhRate : null, kuntaRate = kc.M ? kc.M.rate : null;
+  const ratio = demandRate != null && demandRate > 0.0005 ? supplyRate / demandRate : (supplyRate > 0.002 ? Infinity : null);
+  const ratioK = kuntaRate > 0 ? supplyRate / kuntaRate : null;
+  const ownM2 = site.m2 || null, ownApts = site.apts || null;
+  const pipe24 = rows.filter(p => active(p) && p.e.date && p.e.date < addM(NOW, 24));
+  const sized = pipe24.filter(p => p.m2 && ownM2), matchApts = sized.filter(p => Math.abs(p.m2 - ownM2) <= SIZE_TOL).reduce((s, p) => s + p.apts * p.e.w, 0), sizedApts = sized.reduce((s, p) => s + p.apts * p.e.w, 0);
+  const matchShare = sizedApts > 0 ? matchApts / sizedApts : null;
+  const base = ownApts || (stock ? stock * 0.1 : null);
+  const s1 = ratio == null ? 0 : Math.min((isFinite(ratio) ? ratio : 3) / 3, 1) * 40;
+  const s2 = base ? Math.min((n24 / base) / 3, 1) * 25 : 0;
+  const s3 = matchShare != null ? matchShare * 20 * Math.min(n24 / (base || 1), 1) : 0;
+  const s4 = base ? Math.min(n6 / base, 1) * 15 : (n6 > 0 ? 8 : 0);
+  const risk = Math.round(s1 + s2 + s3 + s4);
+  const level = risk >= 60 ? 'bad' : risk >= 35 ? 'warn' : 'good';
+  const soon6 = rows.filter(p => active(p) && p.e.date && p.e.date < addM(NOW, 6)).sort((a, b) => a.e.date - b.e.date);
+  const stale = rows.filter(p => supplyOK(p) && p.e.stale);
+  Object.assign(R, { n6, n24, n36, supplyRate, demandRate, kuntaRate, ratio, ratioK, matchShare, matchApts, risk, riskParts: [s1, s2, s3, s4].map(Math.round), level, soon6, stale,
+    uc: rows.filter(p => supplyOK(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0),
+    permitRaw: rows.filter(p => active(p) && p.e.kind === 'permit').reduce((s, p) => s + p.apts, 0) });
+  R.events = eventsFor(R, 90);
+  return R;
+}
+// muutokset: päivämäärien perusteella + selaimen edelliseen tarkistukseen verraten
+function eventsFor(R, days) {
+  const since = addD(NOW, -days), ev = [];
+  for (const p of R.rows) {
+    if (!supplyOK(p) && p.laji !== NEW) continue;
+    if (p.valmis && p.valmis >= since) ev.push({ type: 'Valmistunut', date: p.valmis, p });
+    else if (p.aloitus && p.aloitus >= since) ev.push({ type: 'Aloitettu', date: p.aloitus, p });
+    else if (p.paatos && p.paatos >= since && p.tila !== 'Rauennut') ev.push({ type: 'Uusi lupa', date: p.paatos, p });
+  }
+  const key = 'sm_snap_' + (R.site.id || (R.site.lat.toFixed(4) + '_' + R.site.lon.toFixed(4))) + '_' + R.r;
+  const prev = store.get(key), cur = {};
+  R.rows.forEach(p => cur[p.id] = p.tila);
+  if (prev && prev.s) {
+    for (const p of R.rows) {
+      const was = prev.s[p.id];
+      if (was === undefined && !ev.some(x => x.p === p) && supplyOK(p)) ev.push({ type: 'Uusi Ryhdissä', date: new Date(prev.t), p, snap: true });
+      else if (was && was !== p.tila && !ev.some(x => x.p === p)) ev.push({ type: `Tila: ${was} → ${p.tila}`, date: new Date(prev.t), p, snap: true });
+    }
+  }
+  if (!prev || Date.now() - prev.t > 864e5) store.set(key, { t: Date.now(), s: cur });
+  R.snapSince = prev ? new Date(prev.t) : null;
+  return ev.sort((a, b) => b.date - a.date);
+}
+function alertsFor(R, ctx = 'site') {
+  const out = [], own = R.site.apts, name = R.site.nimi ? R.site.nimi + ': ' : '';
+  if (R.ratio != null) {
+    const lvl = R.ratio >= 2 ? 'bad' : R.ratio >= 1 ? 'warn' : 'good';
+    if (ctx === 'site' || lvl !== 'good') out.push({ lvl, t: `${name}${lvl === 'bad' ? 'Tarjonta kasvaa selvästi kysyntää nopeammin' : lvl === 'warn' ? 'Tarjonta kasvaa kysyntää nopeammin' : 'Tarjonta kysynnän tahdissa'}`,
+      d: `Lähialueen asuntokanta kasvaa seuraavan 3 vuoden aikana ${spct(R.supplyRate)}/v. Postinumeroalueen taloudet ovat kasvaneet ${spct(R.demandRate)}/v (2019→2024)${isFinite(R.ratio) ? `, joten suhde on <b>${n1(R.ratio)}×</b>` : ', eli kysyntä ei kasva'}.` });
+  }
+  if (R.soon6.length) {
+    const apts = R.soon6.reduce((s, p) => s + p.apts * p.e.w, 0), lvl = own ? (apts / own >= 0.5 ? 'bad' : 'warn') : (apts >= 50 ? 'bad' : 'warn');
+    out.push({ lvl, t: `${name}Varaudu: ${n0(apts)} asuntoa valmistuu alle 6 kk päähän`, d: R.soon6.slice(0, 4).map(p => `${n0(p.apts)} as. ~${fmtM(p.e.date)} (${Math.max(0, Math.round(monthsBetween(NOW, p.e.date)))} kk) · ${n0(p.dist)} m${p.m2 ? ' · ' + n0(p.m2) + ' m²/as' : ''}${p.addr ? ' · ' + esc(p.addr) : ''}`).join('<br>') });
+  }
+  const evs = R.events.filter(e => e.date >= addD(NOW, -30));
+  if (evs.length) out.push({ lvl: 'info', t: `${name}${evs.length} muutosta viimeisen 30 pv aikana`, d: evs.slice(0, 4).map(e => `${e.type}: ${n0(e.p.apts)} as. ${e.p.kaytto.toLowerCase()} · ${n0(e.p.dist)} m · ${fmtD(e.date)}`).join('<br>') });
+  if (R.matchShare != null && R.matchShare >= 0.5 && R.n24 >= 20) out.push({ lvl: 'warn', t: `${name}Samankokoisia asuntoja tulossa`, d: `${pct(R.matchShare)} seuraavan 24 kk kilpailevista asunnoista (${n0(R.matchApts)} as.) on samaa kokoluokkaa kuin kohteessa (${n0(R.site.m2)} m² ±${SIZE_TOL}).` });
+  const big = R.rows.filter(p => active(p) && p.apts >= 100);
+  if (big.length && ctx === 'site') out.push({ lvl: 'warn', t: `${big.length} suurhanketta (≥ 100 as.) tulossa`, d: big.sort((a, b) => b.apts - a.apts).slice(0, 4).map(p => `${n0(p.apts)} as. · ${p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu'} · ~${fmtM(p.e.date)} · ${n0(p.dist)} m`).join('<br>') });
+  if (R.plans.length && ctx === 'site') out.push({ lvl: 'info', t: `${R.plans.length} kaavaa vireillä säteellä`, d: R.plans.slice(0, 3).map(p => `${esc(p.name)} · ${esc(p.stage || '')}`).join('<br>') });
+  if (R.stale.length && ctx === 'site') out.push({ lvl: 'info', t: `${R.stale.length} vanhaa aloittamatonta lupaa`, d: 'Lupa on yli 4 v vanha, eikä aloitusta ole kirjattu, joten näitä ei lasketa ennusteeseen.' });
+  const order = { bad: 0, warn: 1, info: 2, good: 3 };
+  return out.sort((a, b) => order[a.lvl] - order[b.lvl]);
+}
+function renderAttn(detailsEl, sevEl, listEl, alerts) {
+  const c = { bad: 0, warn: 0, info: 0 }; alerts.forEach(a => c[a.lvl] = (c[a.lvl] || 0) + 1);
+  sevEl.innerHTML = alerts.length ? ['bad', 'warn', 'info'].filter(k => c[k]).map(k => `<span class="sev"><i class="dot ${k}"></i>${c[k]}</span>`).join(' ') : '<span class="sev">ei huomioita</span>';
+  listEl.innerHTML = alerts.length ? alerts.map(a => `<div class="alert ${a.lvl}"><div class="bar"></div><div><div class="t">${esc(a.t)}</div><div class="d">${a.d}</div></div></div>`).join('') : '<div class="empty">Ei huomioitavaa.</div>';
+}
+
+// ======================= Kartat =======================
+function mkMap(id) {
+  const m = L.map(id, { zoomControl: true, scrollWheelZoom: true }).setView([60.2, 24.9], 10);
+  if (location.protocol === 'file:') L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, attribution: 'Pohjakartta © Esri, HERE, Garmin, © OpenStreetMap · Ryhti / Syke' }).addTo(m);
+  else { document.getElementById(id).classList.add('osm-tiles'); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMapin tekijät</a> · Ryhti / Syke' }).addTo(m); }
+  m._layer = L.layerGroup().addTo(m); return m;
+}
+let dMap, pfMap; const dMarkers = {};
 const KIND_COLOR = k => css({ uc: '--st-uc', permit: '--st-permit', done: '--st-done', lapsed: '--st-lapsed' }[k] || '--st-other');
 const KIND_TXT = { uc: 'Rakenteilla', permit: 'Luvitettu', done: 'Valmistunut', lapsed: 'Rauennut' };
-function popupHtml(p) {
-  const e = p.e;
-  const when = e.kind === 'done' ? `Valmistui ${fmtD(p.valmis)}` : e.stale ? 'Lupa yli 4 v vanha, ei aloitettu – epävarma' : e.date ? `Arvioitu valmistuminen ~${fmtM(e.date)}${e.late ? ' (myöhässä)' : ''}${e.kind === 'permit' ? ` · toteutumistod. ${pct(e.w)}` : ''}` : '';
-  return `<b>${esc(p.kaytto)}</b> · ${esc(KIND_TXT[e.kind])}<br>${p.apts ? `<b>${n0(p.apts)}</b> asuntoa · ` : ''}${p.ka ? n0(p.ka) + ' k-m²' : ''}${p.krs ? ' · ' + p.krs + ' krs' : ''}<br>
-  Lupapäätös ${fmtD(p.paatos) || '–'}${p.aloitus ? ' · aloitus ' + fmtD(p.aloitus) : ''}<br>${when}<br>
-  <span style="color:${css('--muted')}">${esc(p.laji)} · kiint. ${esc(p.kiint || '–')} · lupa ${esc(p.lupa || '–')} · ${n0(p.dist)} m</span>`;
+function popupHtml(p, R) {
+  const e = p.e, when = e.kind === 'done' ? `Valmistui ${fmtD(p.valmis)}` : e.stale ? 'Lupa yli 4 v vanha – epävarma' : e.date ? `Arvio ~${fmtM(e.date)}${e.late ? ' (myöhässä)' : ''}${e.kind === 'permit' ? ` · toteutumistod. ${pct(e.w)}` : ''}` : '';
+  return `<b>${esc(p.kaytto)}</b> · ${KIND_TXT[e.kind]}${p.addr ? '<br>' + esc(p.addr) : ''}<br>${p.apts ? `<b>${n0(p.apts)}</b> as. · ` : ''}${p.m2 ? n0(p.m2) + ' m²/as · ' : ''}${p.ka ? n0(p.ka) + ' k-m²' : ''}<br>Lupa ${fmtD(p.paatos) || '–'}${p.aloitus ? ' · aloitus ' + fmtD(p.aloitus) : ''}<br>${when}<br><span style="color:${css('--muted')}">kiint. ${esc(p.kiint || '–')} · ${n0(p.dist)} m</span>`;
 }
-function drawMap() {
-  layerG.clearLayers(); Object.keys(markers).forEach(k => delete markers[k]);
-  if (S.lat == null) return;
-  circle = L.circle([S.lat, S.lon], { radius: S.r, color: css('--ink2'), weight: 1, dashArray: '4 4', fill: false }).addTo(layerG);
-  pin = L.circleMarker([S.lat, S.lon], { radius: 7, color: css('--panel'), weight: 2, fillColor: css('--ink'), fillOpacity: 1 }).addTo(layerG).bindTooltip(esc(S.label));
-  const resOnly = $('#resonly').checked;
-  const list = [...S.local].sort((a, b) => b.apts - a.apts);
-  for (const p of list) {
-    if (p.lat == null) continue;
-    if (resOnly && !isRes(p.kaytto)) continue;
-    const col = KIND_COLOR(p.e.kind);
-    const rad = p.apts > 0 ? Math.max(5, Math.min(22, 3 + Math.sqrt(p.apts) * 1.4)) : 4;
-    const mk = L.circleMarker([p.lat, p.lon], { radius: rad, color: col, weight: p.laji === NEW ? 1.5 : 1,
-      fillColor: col, fillOpacity: p.e.kind === 'done' || p.e.kind === 'lapsed' ? .35 : .75, dashArray: p.e.stale ? '3 3' : null })
-      .addTo(layerG).bindPopup(popupHtml(p));
-    mk.on('click', () => selectRow(p.id, false));
-    markers[p.id] = mk;
-  }
-  map.fitBounds(circle.getBounds(), { padding: [20, 20] });
+function drawDetailMap(R) {
+  if (!dMap) { dMap = mkMap('d-map'); dMap.on('click', e => { const { lat, lng } = e.latlng, q = `${lat.toFixed(5)}, ${lng.toFixed(5)}`; const div = document.createElement('div'); div.className = 'mappop'; div.innerHTML = `<div>${q}</div><button class="btn sm pri">Hae tästä pisteestä</button>`; div.querySelector('button').onclick = () => { dMap.closePopup(); go({ view: 'haku', q, r: +$('#radius').value }); }; L.popup().setLatLng(e.latlng).setContent(div).openOn(dMap); }); }
+  const g = dMap._layer; g.clearLayers(); Object.keys(dMarkers).forEach(k => delete dMarkers[k]);
+  const circle = L.circle([R.site.lat, R.site.lon], { radius: R.r, color: css('--ink2'), weight: 1, dashArray: '4 4', fill: false }).addTo(g);
+  R.plans.forEach(p => L.circleMarker([p.lat, p.lon], { radius: 7, color: css('--st-plan'), weight: 1.5, fillColor: css('--st-plan'), fillOpacity: .25, dashArray: '2 3' }).addTo(g).bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.stage || '')}<br>${esc(p.date || '')}${p.link ? `<br><a href="${esc(p.link)}" target="_blank" rel="noopener">Kaavan sivu</a>` : ''}`));
+  const resOnly = $('#d-resonly').checked;
+  [...R.rows].sort((a, b) => b.apts - a.apts).forEach(p => {
+    if (resOnly && !isRes(p.kaytto)) return;
+    const col = KIND_COLOR(p.e.kind), rad = p.apts > 0 ? Math.max(5, Math.min(22, 3 + Math.sqrt(p.apts) * 1.4)) : 4;
+    const mk = L.circleMarker([p.lat, p.lon], { radius: rad, color: col, weight: p.laji === NEW ? 1.5 : 1, fillColor: col, fillOpacity: p.e.kind === 'done' || p.e.kind === 'lapsed' ? .35 : .75, dashArray: p.e.stale ? '3 3' : null }).addTo(g).bindPopup(popupHtml(p, R));
+    mk.on('click', () => { selId = p.id; drawDetailTable(R); }); dMarkers[p.id] = mk;
+  });
+  L.circleMarker([R.site.lat, R.site.lon], { radius: 7, color: css('--panel'), weight: 2, fillColor: css('--ink'), fillOpacity: 1 }).addTo(g).bindTooltip(esc(R.site.nimi || R.site.label));
+  dMap._fit = () => { dMap.invalidateSize(); dMap.fitBounds(circle.getBounds(), { padding: [20, 20] }); };
+  setTimeout(dMap._fit, 0);
 }
 
-// ======================= Taulukko =======================
-const COLS = [
+// ======================= Detail (Kohde & Haku) =======================
+let curR = null, selId = null, sortK = 'default', sortDir = 1;
+const charts = {};
+function chartBase() { Chart.defaults.font.family = css('--body'); Chart.defaults.color = css('--ink2'); Chart.defaults.borderColor = css('--line2'); }
+function mkChart(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($('#' + id), cfg); }
+const legendOpt = { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } };
+const tipOpt = { callbacks: { label: c => `${c.dataset.label}: ${n0(c.parsed.y)}` } };
+function barCfg(t, labels, extra = []) {
+  return { type: 'bar', data: { labels, datasets: [
+    { label: 'Valmistunut', data: labels.map(y => Math.round(t.done[y] || 0)), backgroundColor: css('--st-done'), stack: 's', order: 2 },
+    { label: 'Rakenteilla (arvio)', data: labels.map(y => Math.round(t.uc[y] || 0)), backgroundColor: css('--st-uc'), stack: 's', order: 2 },
+    { label: 'Luvitettu, painotettu', data: labels.map(y => Math.round(t.permit[y] || 0)), backgroundColor: css('--st-permit'), stack: 's', order: 2 }, ...extra] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: legendOpt, tooltip: tipOpt }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { callback: v => nf.format(v) } } } } };
+}
+function heroHtml(R) {
+  const lvl = R.ratio == null ? 'info' : R.ratio >= 2 ? 'bad' : R.ratio >= 1 ? 'warn' : 'good';
+  const verdict = R.ratio == null ? 'Paikallista kysyntää ei voitu laskea' : !isFinite(R.ratio) ? 'Tarjonta kasvaa, vaikka paikallinen kysyntä ei kasva' : `Tarjonta kasvaa ${n1(R.ratio)}× ${R.ratio >= 1 ? 'nopeammin' : 'hitaammin'} kuin paikallinen kysyntä`;
+  const vals = [R.supplyRate, R.demandRate, R.kuntaRate].filter(v => v != null && isFinite(v)), mx = Math.max(0.01, ...vals.map(Math.abs));
+  const bar = (k, sub, v, col) => { const w = v == null ? 0 : Math.min(Math.abs(v) / mx, 1) * 50; return `<div class="brow"><div class="k">${k}<small>${sub}</small></div><div class="track"><div class="zero" style="left:50%"></div>${v == null ? '' : `<div class="fill" style="background:${col};${v >= 0 ? `left:50%;width:${w}%` : `left:${50 - w}%;width:${w}%`}"></div>`}</div><div class="v">${spct(v)}/v</div></div>`; };
+  return `<div class="hero"><div class="verdict ${lvl}">${verdict}<small>Paikallinen tarjonta = seuraavan 3 v valmistuvat asunnot ${rr(R.r)} säteellä suhteessa nykyiseen kantaan (${n0(R.stock)} as.). Paikallinen kysyntä = postinumeroalueen ${R.pv ? esc(R.pv.pc + ' ' + R.pv.name) : ''} talouksien kasvu 2019→2024.${R.ratioK != null ? ` Kunnan väestöennusteeseen verrattuna suhde on ${n1(R.ratioK)}×.` : ''}</small></div>
+    <div class="bars">${bar('Paikallinen tarjonta', `${n0(R.n36)} as. / 3 v · ${rr(R.r)}`, R.supplyRate, css('--st-uc'))}${bar('Paikallinen kysyntä', R.pv ? `taloudet ${n0(R.pv.y0.hh)} → ${n0(R.pv.y1.hh)} (Paavo)` : 'ei saatavilla', R.demandRate, css('--accent'))}${bar('Kunnan kysyntä (ennuste)', R.kc.M ? `${n0(R.kc.M.yrBase)} as./v vuoteen 2040` : '', R.kuntaRate, css('--dim'))}
+    <div class="hint">Riskipisteet <span class="pill ${R.level}">${R.risk}</span> = paine ${R.riskParts[0]} + 24 kk tarjonta ${R.riskParts[1]} + kokojen osuma ${R.riskParts[2]} + alle 6 kk ${R.riskParts[3]}</div></div></div>`;
+}
+function renderDetail(R, mode) {
+  curR = R; selId = null; sortK = 'default';
+  $('#d-start').hidden = true; $('#d-main').hidden = false;
+  $('#d-hero').innerHTML = heroHtml(R);
+  const al = alertsFor(R, 'site'); renderAttn($('#d-attn'), $('#d-attn-sev'), $('#d-alerts'), al); $('#d-attn').open = false;
+  const s = R.site, pv = R.pv, kc = R.kc;
+  $('#d-facts-h').textContent = mode === 'kohde' ? s.nimi : 'Hakukohde';
+  $('#d-facts-sub').textContent = `${kc.name} · ${rr(R.r)}`;
+  const F = (k, v, x) => `<div class="row"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x || ''}</div></div>`;
+  $('#d-facts').innerHTML = [
+    mode === 'kohde' ? F('Kohde', s.apts ? n0(s.apts) + ' as.' : '–', `${esc(s.osoite || '')}, ${esc(s.kuntaNimi || '')}${s.kaupunginosa ? ' · ' + esc(s.kaupunginosa) : ''}${s.vuosi ? ' · valm. ' + s.vuosi : ''}${s.m2 ? ' · keskikoko ' + n1(s.m2) + ' m²' : ''}${s.url ? ` · <a href="${esc(s.url)}" target="_blank" rel="noopener">leonakodit.fi</a>` : ''}${s.huom ? ' · ' + esc(s.huom) : ''}`) : '',
+    F('Nykyinen asuntokanta säteellä', n0(R.stock) + ' as.', 'Ryhti, asuinrakennukset'),
+    F('Valmistuu alle 6 kk', n0(R.n6) + ' as.', R.soon6.length ? R.soon6.map(p => `~${fmtM(p.e.date)} ${n0(p.apts)} as.`).join(' · ') : 'ei hankkeita'),
+    F('Valmistuu 24 kk', n0(R.n24) + ' as.', `rakenteilla ${n0(R.uc)} as. · luvitettu ${n0(R.permitRaw)} as. (ennen painotusta)`),
+    s.m2 ? F('Asuntokokojen osuma', R.matchShare == null ? '–' : pct(R.matchShare), `24 kk kilpailevista asunnoista samaa kokoluokkaa (${n0(s.m2)} m² ±${SIZE_TOL})`) : '',
+    F('Kaavoja vireillä', String(R.plans.length), planSupported(R.kunta) ? 'kunnan kaavarajapinta' : 'Ryhti (kattavuus vielä kapea tässä kunnassa)'),
+    F('Muutokset 30 pv', String(R.events.filter(e => e.date >= addD(NOW, -30)).length), R.snapSince ? `vertailu myös edelliseen tarkistukseen ${fmtD(R.snapSince)}` : 'seuranta tässä selaimessa alkoi nyt'),
+  ].join('');
+  $('#d-map-sub').textContent = `${R.rows.length} hanketta · ${R.plans.length} kaavaa`;
+  drawDetailMap(R); drawDetailTable(R);
+  // kaavat
+  $('#d-plans thead').innerHTML = '<tr><th>Kaava</th><th>Vaihe</th><th>Päivä</th><th class="num">Etäisyys</th><th>Lähde</th></tr>';
+  $('#d-plans tbody').innerHTML = R.plans.length ? R.plans.map(p => `<tr><td class="wrap">${p.link ? `<a href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.name)}</a>` : esc(p.name)}</td><td class="wrap">${esc(p.stage || '')}</td><td>${esc(p.date || '')}</td><td class="num">${n0(Math.max(0, p.dist))} m</td><td>${esc(p.src)}</td></tr>`).join('') : `<tr><td colspan="5" class="empty">${planSupported(R.kunta) ? 'Ei vireillä olevia kaavoja säteellä.' : 'Kunnan kaavoja ei ole vielä avoimessa rajapinnassa (Ryhti laajenee kuntien siirtäessä tietonsa).'}</td></tr>`;
+  $('#d-plans-sub').textContent = planSupported(R.kunta) ? kc.name + ' · kunnan rajapinta' : 'Ryhti';
+  // kysyntä
+  const M = kc.M, D = kc.D;
+  $('#d-dm-sub').textContent = `${pv ? pv.pc + ' ' + pv.name + ' · ' : ''}${kc.name}`;
+  $('#d-dm').innerHTML = [
+    pv ? F('Postinumeroalueen taloudet 2019 → 2024', spct(pv.hhRate) + '/v', `${n0(pv.y0.hh)} → ${n0(pv.y1.hh)} taloutta`) : '',
+    pv ? F('Asukkaat 2019 → 2024', spct(pv.popRate) + '/v', `${n0(pv.y0.pop)} → ${n0(pv.y1.pop)}`) : '',
+    pv ? F('20–34-vuotiaat 2019 → 2024', spct(pv.youngRate) + '/v', `${n0(pv.y0.young)} → ${n0(pv.y1.young)} · vuokra-asumisen ydinikäryhmä`) : '',
+    pv ? F('Vuokralla asuvat taloudet', pct(pv.rentShare), `${n0(pv.y1.rent)} / ${n0(pv.y1.hh)} taloutta · asuntojen keskikoko ${n1(pv.y1.m2)} m²`) : '',
+    M ? F('Kunnan väkiluku 2025 → 2040', spct(M.popChg), `${n0(M.p25.total)} → ${n0(M.p40.total)} (ennuste 2024)`) : '',
+    M ? F('Kunnan asuntotarve 2025–2040', n0(M.yrBase) + ' /v', `${n0(M.needBase)}–${n0(M.needTrend)} as. · kasvu ${pct(M.rate)}/v asuntokunnista`) : '',
+    kc.K && M ? F('Kunnan tuotanto viim. 5 v', n0(kc.K.avg5) + ' /v', `${pct(kc.K.avg5 / M.yrBase)} tarpeesta · tunnettu putki seuraavat 3 v ${n0(kc.K.next3)} as./v`) : '',
+  ].join('');
+  // kaaviot
+  chartBase();
+  mkChart('ch-local', barCfg(timeline(R.rows), YEARS));
+  $('#d-tl-sub').textContent = `kanta ${n0(R.stock)} as.`;
+  const yrs = YEARS.filter(y => y >= 2018);
+  mkChart('ch-kunta', barCfg(kc.K.t, yrs, M ? [{ type: 'line', label: 'Asuntotarve / v', data: yrs.map(y => y >= 2025 ? Math.round(M.yrBase) : null), borderColor: css('--need'), borderWidth: 2, pointRadius: 0, stack: 'n', order: 1 }] : []));
+  $('#d-kunta-sub').textContent = kc.name;
+  const A = kc.A;
+  $('#d-assump').innerHTML = ['Kerrostalo', 'Pientalo'].map(k => F(`${k}: viive luvasta aloitukseen`, n1(A[k].lag) + ' kk', `mediaani, n = ${A[k].lagN}${A[k].lagN < 15 ? ' (oletus)' : ''}`) + F(`${k}: rakennusaika`, n1(A[k].build) + ' kk', `mediaani, n = ${A[k].buildN}${A[k].buildN < 15 ? ' (oletus)' : ''}`) + F(`${k}: toteutumisaste`, pct(A[k].real), `3–6 v sitten luvitetuista aloitettu (${n0(A[k].realApts)} as.)${A[k].realApts < 50 ? ' – oletus 80 %' : ''}`)).join('');
+  $('#ai-ctx').textContent = s.nimi || s.label;
+}
+const DCOLS = [
   { k: 'tila', t: 'Tila', v: p => ({ uc: 1, permit: 2, done: 3, lapsed: 4 }[p.e.kind]) },
-  { k: 'kaytto', t: 'Käyttötarkoitus', v: p => p.kaytto },
+  { k: 'addr', t: 'Osoite / käyttö', v: p => p.addr || p.kaytto },
   { k: 'apts', t: 'Asuntoja', num: 1, v: p => p.apts },
-  { k: 'ka', t: 'Kerrosala m²', num: 1, v: p => p.ka || 0 },
-  { k: 'paatos', t: 'Lupapäätös', v: p => p.paatos ? +p.paatos : 0 },
+  { k: 'm2', t: 'm²/as', num: 1, v: p => p.m2 || 0 },
+  { k: 'paatos', t: 'Lupa', v: p => p.paatos ? +p.paatos : 0 },
   { k: 'aloitus', t: 'Aloitus', v: p => p.aloitus ? +p.aloitus : 0 },
   { k: 'valm', t: 'Valmistuminen', v: p => p.e.date ? +p.e.date : 9e15 },
   { k: 'dist', t: 'Etäisyys', num: 1, v: p => p.dist },
-  { k: 'kiint', t: 'Kiinteistö', v: p => p.kiint || '' },
+  { k: 'osuma', t: 'Koko', v: p => p.m2 && curR.site.m2 ? Math.abs(p.m2 - curR.site.m2) : 999 },
 ];
-let sortK = 'default', sortDir = 1;
-function filtered() {
-  const on = [...document.querySelectorAll('#chips .chip.on')].map(c => c.dataset.k), resOnly = $('#resonly').checked;
-  return S.local.filter(p => on.includes(p.e.kind) && (!resOnly || isRes(p.kaytto)));
-}
-function drawTable() {
-  const rows = filtered();
-  if (sortK === 'default') rows.sort((a, b) => ({ uc: 1, permit: 2, done: 3, lapsed: 4 }[a.e.kind] - { uc: 1, permit: 2, done: 3, lapsed: 4 }[b.e.kind])
-    || (a.e.kind === 'done' ? (b.valmis - a.valmis) : ((a.e.date ? +a.e.date : 9e15) - (b.e.date ? +b.e.date : 9e15))) || b.apts - a.apts);
-  else { const c = COLS.find(c => c.k === sortK); rows.sort((a, b) => { const x = c.v(a), y = c.v(b); return (x > y ? 1 : x < y ? -1 : 0) * sortDir; }); }
-  $('#tbl thead').innerHTML = '<tr>' + COLS.map(c => `<th class="${c.num ? 'num' : ''}" data-k="${c.k}">${c.t}${sortK === c.k ? (sortDir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('') + '</tr>';
-  $('#tbl tbody').innerHTML = rows.length ? rows.map(p => {
-    const e = p.e;
-    const valm = e.kind === 'done' ? fmtD(p.valmis) : e.stale ? '<span class="est">epävarma</span>' : e.date ? `<span class="est">~${fmtM(e.date)}</span>${e.late ? '<span class="flag">MYÖHÄSSÄ</span>' : ''}` : '–';
-    return `<tr data-id="${esc(p.id)}" class="${S.sel === p.id ? 'sel' : ''}">
-      <td><span class="tag"><i style="background:${KIND_COLOR(e.kind)}"></i>${KIND_TXT[e.kind]}</span>${e.kind === 'permit' && !e.stale ? `<span class="flag" style="color:var(--muted)">${pct(e.w)}</span>` : ''}</td>
-      <td>${esc(p.kaytto)}${p.laji === EXT ? ' <span class="est">(laajennus)</span>' : ''}</td>
-      <td class="num">${p.apts ? n0(p.apts) : '–'}</td><td class="num">${p.ka ? n0(p.ka) : '–'}</td>
-      <td>${fmtD(p.paatos)}</td><td>${fmtD(p.aloitus)}</td><td>${valm}</td>
-      <td class="num">${n0(p.dist)} m</td><td style="font-family:var(--mono);font-size:11.5px">${esc(p.kiint || '')}</td></tr>`;
-  }).join('') : `<tr><td colspan="${COLS.length}" class="empty">Ei hankkeita valituilla suodattimilla.</td></tr>`;
-  const res = rows.filter(supplyOK).reduce((s, p) => s + p.apts, 0);
-  $('#tbl-sub').textContent = `${rows.length} riviä · ${n0(res)} asuntoa uudisrakennuksissa`;
-}
-function selectRow(id, fly = true) {
-  S.sel = id; drawTable();
-  const tr = document.querySelector(`#tbl tr[data-id="${CSS.escape(id)}"]`); if (tr && !fly) tr.scrollIntoView({ block: 'nearest' });
-  const mk = markers[id]; if (mk && fly) { map.setView(mk.getLatLng(), Math.max(map.getZoom(), 16)); mk.openPopup(); }
+function filteredRows(R) { const on = [...document.querySelectorAll('#d-chips .chip.on')].map(c => c.dataset.k), resOnly = $('#d-resonly').checked; return R.rows.filter(p => on.includes(p.e.kind) && (!resOnly || isRes(p.kaytto))); }
+function drawDetailTable(R) {
+  const rows = filteredRows(R), ord = { uc: 1, permit: 2, done: 3, lapsed: 4 };
+  if (sortK === 'default') rows.sort((a, b) => ord[a.e.kind] - ord[b.e.kind] || (a.e.kind === 'done' ? b.valmis - a.valmis : (a.e.date ? +a.e.date : 9e15) - (b.e.date ? +b.e.date : 9e15)) || b.apts - a.apts);
+  else { const c = DCOLS.find(c => c.k === sortK); rows.sort((a, b) => { const x = c.v(a), y = c.v(b); return (x > y ? 1 : x < y ? -1 : 0) * sortDir; }); }
+  $('#d-tbl thead').innerHTML = '<tr>' + DCOLS.filter(c => c.k !== 'osuma' || R.site.m2).map(c => `<th class="${c.num ? 'num' : ''}" data-k="${c.k}">${c.t}${sortK === c.k ? (sortDir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('') + '<th></th></tr>';
+  $('#d-tbl tbody').innerHTML = rows.length ? rows.map(p => {
+    const e = p.e, valm = e.kind === 'done' ? fmtD(p.valmis) : e.stale ? '<span class="est">epävarma</span>' : e.date ? `<span class="est">~${fmtM(e.date)}</span>${e.late ? '<span class="flag">myöhässä</span>' : ''}${e.date < addM(NOW, 6) ? '<span class="flag" style="color:var(--bad)">≤ 6 kk</span>' : ''}` : '–';
+    const match = p.m2 && R.site.m2 ? (Math.abs(p.m2 - R.site.m2) <= SIZE_TOL ? '<span class="pill warn">osuma</span>' : '<span class="est">eri</span>') : '';
+    const oik = p.addr && active(p) ? `<a href="https://www.google.com/search?q=${encodeURIComponent('"' + p.addr.split(',')[0] + '" vuokra-asunnot')}" target="_blank" rel="noopener" title="Etsi vuokrailmoituksia osoitteella">vuokrailm.</a>` : '';
+    return `<tr class="click${selId === p.id ? ' sel' : ''}" data-id="${esc(p.id)}"><td><span class="tag"><i style="background:${KIND_COLOR(e.kind)}"></i>${KIND_TXT[e.kind]}</span>${e.kind === 'permit' && !e.stale ? `<span class="flag" style="color:var(--muted)">${pct(e.w)}</span>` : ''}</td>
+      <td class="wrap">${p.addr ? esc(p.addr) + '<br>' : ''}<span class="est">${esc(p.kaytto)}${p.laji === EXT ? ' · laajennus' : ''}</span></td><td class="num">${p.apts ? n0(p.apts) : '–'}</td><td class="num">${p.m2 ? n0(p.m2) : '–'}</td>
+      <td>${fmtD(p.paatos)}</td><td>${fmtD(p.aloitus)}</td><td>${valm}</td><td class="num">${n0(p.dist)} m</td>${R.site.m2 ? `<td>${match}</td>` : ''}<td>${oik}</td></tr>`;
+  }).join('') : `<tr><td colspan="10" class="empty">Ei hankkeita valituilla suodattimilla.</td></tr>`;
+  $('#d-tbl-sub').textContent = `${rows.length} riviä · ${n0(rows.filter(supplyOK).reduce((s, p) => s + p.apts, 0))} asuntoa uudisrakennuksissa`;
 }
 
-// ======================= Kaaviot =======================
-const charts = {};
-function chartBase() {
-  Chart.defaults.font.family = css('--body'); Chart.defaults.color = css('--ink2'); Chart.defaults.borderColor = css('--line2');
+// ======================= Portfolio =======================
+let PF = null, pfResults = [], pfRunId = 0;
+function loadPortfolio() { const p = store.get('sm_portfolio'); PF = p && Array.isArray(p.kohteet) && p.kohteet.length ? p : null; return PF; }
+function normPortfolio(obj) {
+  const arr = Array.isArray(obj) ? obj : obj.kohteet || obj.properties || [];
+  const ks = arr.map((x, i) => ({ id: x.id || 'k' + i, nimi: x.nimi || x.name || x.osoite || 'Kohde ' + (i + 1), osoite: x.osoite || x.address || '', kunta: x.kunta || x.city || '', kaupunginosa: x.kaupunginosa || '', kunta_nro: x.kuntanumero || null,
+    lat: x.lat != null ? +x.lat : null, lon: x.lon != null ? +x.lon : null, postal: x.postinumero || null, apts: x.asuntoja_ryhti || x.asuntoja || x.homes || null, m2: x.keskikoko_m2 || x.m2 || null, vuosi: x.valmistumisvuosi || null, url: x.url || '', huom: x.asuntoja_huom || '' }));
+  return { nimi: obj.nimi || 'Portfolio', haettu: obj.haettu || null, kohteet: ks };
 }
-function mkChart(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($('#' + id), cfg); }
-function barCfg(t, extra = []) {
-  return { type: 'bar', data: { labels: YEARS, datasets: [
-    { label: 'Valmistunut (toteuma)', data: YEARS.map(y => Math.round(t.done[y])), backgroundColor: css('--st-done'), stack: 's', order: 2 },
-    { label: 'Rakenteilla (arvio)', data: YEARS.map(y => Math.round(t.uc[y])), backgroundColor: css('--st-uc'), stack: 's', order: 2 },
-    { label: 'Luvitettu, painotettu (arvio)', data: YEARS.map(y => Math.round(t.permit[y])), backgroundColor: css('--st-permit'), stack: 's', order: 2 },
-    ...extra] },
-    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } },
-        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${n0(c.parsed.y)}` } } },
-      scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { callback: v => nf.format(v) } } } } };
+const siteOf = k => ({ id: k.id, nimi: k.nimi, osoite: k.osoite, kuntaNimi: k.kunta, kaupunginosa: k.kaupunginosa, lat: k.lat, lon: k.lon, apts: k.apts, m2: k.m2, vuosi: k.vuosi, url: k.url, huom: k.huom, label: k.nimi });
+async function ensureCoords(list) { for (const k of list) if (k.lat == null && k.osoite) { try { const g = await geocode(k.osoite + (k.kunta ? ', ' + k.kunta : '')); k.lat = g.lat; k.lon = g.lon; k.kunta_nro = k.kunta_nro || g.kunta; } catch (e) {} } }
+async function runPortfolio({ force = false } = {}) {
+  if (!loadPortfolio()) return [];
+  const my = ++pfRunId, r = +$('#pf-radius').value, list = PF.kohteet;
+  await ensureCoords(list);
+  $('#pf-prog-panel').hidden = false; let done = 0;
+  const upd = () => { $('#pf-prog').style.width = (done / list.length * 100) + '%'; $('#pf-prog-txt').textContent = `Analysoidaan kohteita ${done}/${list.length}… Ensimmäinen ajo hakee kuntien aineistot (Helsinki, Espoo ja Vantaa ~10 s kukin), jonka jälkeen ne ovat välimuistissa.`; };
+  upd(); status('pf', 'run', 'Portfolio');
+  // kunnat ensin rinnakkain (välimuisti)
+  const kunnat = [...new Set(list.map(k => k.kunta_nro).filter(Boolean))];
+  await pool(kunnat, 4, k => kuntaCtx(k, force).catch(() => null));
+  const res = await pool(list, 6, async k => { if (k.lat == null) throw new Error('ei koordinaatteja'); const R = await analyzeSite({ ...siteOf(k), kunta: k.kunta_nro }, r, { force }); done++; upd(); return R; });
+  if (my !== pfRunId) return pfResults;
+  pfResults = res.map((R, i) => R && !R.error ? R : { error: (R && R.error) || 'virhe', site: siteOf(list[i]) });
+  $('#pf-prog-panel').hidden = true;
+  const errs = pfResults.filter(x => x.error).length;
+  status('pf', errs ? 'err' : 'ok', `Portfolio: ${pfResults.length - errs}/${pfResults.length} kohdetta${errs ? ` (${errs} virhettä)` : ''} · ${fmtD(NOW)}`);
+  store.set('sm_pf_last', Date.now());
+  renderPortfolio(); return pfResults;
 }
-
-// ======================= Renderöinti =======================
-function renderAll() {
-  if (S.lat == null) return;
-  const A = S.A;
-  if (A) S.local.forEach(p => p.e = expected(p, A));
-  $('#crumb').innerHTML = `${esc(S.label)}<small>${esc(S.kuntaName || '')}${S.kunta ? ' · ' + S.kunta : ''} · säde ${S.r < 1000 ? S.r + ' m' : S.r / 1000 + ' km'} · ${esc(S.geoSource)}</small>`;
-  $('#ai-ctx').textContent = S.label;
-  const active = S.local.filter(p => supplyOK(p) && (p.e.kind === 'uc' || (p.e.kind === 'permit' && !p.e.stale)));
-  $('#n-projects').textContent = active.length ? active.length : '';
-  $('#map-sub').textContent = `${S.local.length} hanketta säteellä`;
-  drawMap(); drawTable(); renderTimeline(); renderDemand(); renderAlerts();
+function renderPortfolio() {
+  const ok = pfResults.filter(R => !R.error);
+  $('#crumb').innerHTML = `${esc(PF.nimi)}<small>${PF.kohteet.length} kohdetta · säde ${rr(+$('#pf-radius').value)}${PF.haettu ? ' · lista ' + esc(PF.haettu) : ''}</small>`;
+  // huomiot
+  const al = [];
+  const soon = dedupeProjects(ok, p => active(p) && p.e.date && p.e.date < addM(NOW, 6));
+  if (soon.length) al.push({ lvl: 'bad', t: `Varaudu: ${soon.length} hanketta (${n0(soon.reduce((s, x) => s + x.p.apts * x.p.e.w, 0))} as.) valmistuu alle 6 kk päähän`, d: soon.sort((a, b) => a.p.e.date - b.p.e.date).slice(0, 10).map(x => `~${fmtM(x.p.e.date)} · ${n0(x.p.apts)} as.${x.p.m2 ? ' · ' + n0(x.p.m2) + ' m²/as' : ''}${x.p.addr ? ' · ' + esc(x.p.addr) : ''} → <b>${x.sites.map(s => esc(s.R.site.nimi) + ' ' + n0(s.dist) + ' m').join(', ')}</b>`).join('<br>') });
+  const high = ok.filter(R => R.level === 'bad').sort((a, b) => b.risk - a.risk);
+  if (high.length) al.push({ lvl: 'warn', t: `${high.length} kohdetta korkealla riskitasolla`, d: high.slice(0, 8).map(R => `<b>${esc(R.site.nimi)}</b> ${R.risk} p · tarjonta ${spct(R.supplyRate)}/v vs. kysyntä ${spct(R.demandRate)}/v`).join('<br>') });
+  const ev7 = dedupeEvents(ok, 7);
+  if (ev7.length) al.push({ lvl: 'info', t: `${ev7.length} muutosta viimeisen 7 pv aikana`, d: ev7.slice(0, 8).map(x => `${x.e.type}: ${n0(x.e.p.apts)} as. ${x.e.p.kaytto.toLowerCase()} → ${x.sites.map(s => esc(s)).join(', ')} · ${fmtD(x.e.date)}`).join('<br>') });
+  const errs = pfResults.filter(R => R.error); if (errs.length) al.push({ lvl: 'info', t: `${errs.length} kohdetta ei voitu analysoida`, d: errs.map(R => esc(R.site.nimi) + ': ' + esc(R.error)).join('<br>') });
+  renderAttn($('#pf-attn'), $('#pf-attn-sev'), $('#pf-alerts'), al);
+  const hot = al.filter(a => a.lvl === 'bad').length; const c = $('#n-portfolio'); c.textContent = soon.length || ''; c.className = 'cnt' + (soon.length ? ' hot' : '');
+  // taulukko
+  drawPfTable();
+  // kalenteri
+  drawCalendar(ok);
+  // kartta
+  if (!pfMap) pfMap = mkMap('pf-map');
+  const g = pfMap._layer; g.clearLayers(); const pts = [];
+  ok.forEach(R => { const col = css({ bad: '--bad', warn: '--warn', good: '--good' }[R.level]); pts.push([R.site.lat, R.site.lon]); L.circleMarker([R.site.lat, R.site.lon], { radius: 6 + Math.min(10, R.n24 / 40), color: col, weight: 2, fillColor: col, fillOpacity: .6 }).addTo(g).bindTooltip(`${esc(R.site.nimi)} · ${R.risk} p · 24 kk ${n0(R.n24)} as.`).on('click', () => go({ view: 'kohde', id: R.site.id })); });
+  if (pts.length) setTimeout(() => { pfMap.invalidateSize(); pfMap.fitBounds(pts, { padding: [20, 20], maxZoom: 12 }); }, 0);
+  drawEvents();
+  $('#ai-ctx').textContent = PF.nimi;
 }
-
-function localStats() {
-  if (!S.A) return null;
-  const n24 = sumWindow(S.local, S.A, 0, 24), n36 = sumWindow(S.local, S.A, 0, 36);
-  const done3 = S.local.filter(p => supplyOK(p) && p.e.kind === 'done' && p.valmis && p.valmis >= addM(NOW, -36)).reduce((s, p) => s + p.apts, 0);
-  const uc = S.local.filter(p => supplyOK(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0);
-  const permitRaw = S.local.filter(p => supplyOK(p) && p.e.kind === 'permit' && !p.e.stale).reduce((s, p) => s + p.apts, 0);
-  const stale = S.local.filter(p => supplyOK(p) && p.e.stale);
-  return { n24, n36, done3, uc, permitRaw, stale, stock: S.stock, rate: S.stock ? (n36.apts / 3) / S.stock : null };
+function dedupeProjects(results, pred) {
+  const m = {};
+  results.forEach(R => R.rows.forEach(p => { if (!pred(p)) return; (m[p.id] = m[p.id] || { p, sites: [] }).sites.push({ R, dist: p.dist }); }));
+  return Object.values(m).map(x => (x.sites.sort((a, b) => a.dist - b.dist), x));
 }
-function kuntaStats() {
-  if (!S.kuntaRows || !S.A) return null;
-  const rows = S.kuntaRows, t = timeline(rows, S.A);
-  const last5 = []; for (let y = NOW_Y - 5; y < NOW_Y; y++) last5.push(t.done[y] || 0);
-  const uc = rows.filter(p => supplyOK(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0);
-  const permW = rows.filter(p => supplyOK(p) && p.e.kind === 'permit').reduce((s, p) => s + p.apts * p.e.w, 0);
-  const n36 = sumWindow(rows, S.A, 0, 36);
-  return { t, avg5: last5.reduce((a, b) => a + b, 0) / 5, uc, permW, next3: n36.apts / 3 };
+function dedupeEvents(results, days) {
+  const m = {}, since = addD(NOW, -days);
+  results.forEach(R => R.events.forEach(e => { if (e.date < since) return; const k = e.p.id + e.type; (m[k] = m[k] || { e, sites: [] }).sites.push(R.site.nimi); }));
+  return Object.values(m).sort((a, b) => b.e.date - a.e.date);
 }
-function demandStats() {
-  const D = S.demand; if (!D) return null;
-  const s = y => D.series.find(x => x.y === y);
-  const p25 = s(2025), p40 = s(2040); if (!p25 || !p40) return null;
-  const hs25 = D.av25 / D.ak25, hs15 = D.av15 / D.ak15, g = Math.pow(hs25 / hs15, 1 / 10) - 1, hs40 = hs25 * Math.pow(1 + g, 15);
-  const needBase = D.ak25 * (p40.total / p25.total - 1);
-  const needTrend = (D.av25 * p40.total / p25.total) / hs40 - D.ak25;
-  return { p25, p40, hs25, hs15, g, hs40, needBase, needTrend, yrBase: needBase / 15, yrTrend: needTrend / 15, rate: needBase / 15 / D.ak25,
-    youngChg: p40.young / p25.young - 1, popChg: p40.total / p25.total - 1 };
+let pfSort = { k: 'risk', dir: -1 };
+const PCOLS = [
+  { k: 'nimi', t: 'Kohde', v: R => R.site.nimi },
+  { k: 'kunta', t: 'Kunta', v: R => R.site.kuntaNimi || '' },
+  { k: 'risk', t: 'Riski', num: 1, v: R => R.error ? -1 : R.risk },
+  { k: 'ratio', t: 'Tarjonta / kysyntä', num: 1, v: R => R.error || R.ratio == null ? -1 : (isFinite(R.ratio) ? R.ratio : 99) },
+  { k: 'sup', t: 'Tarjonta %/v', num: 1, v: R => R.supplyRate ?? -1 },
+  { k: 'dem', t: 'Kysyntä %/v', num: 1, v: R => R.demandRate ?? -9 },
+  { k: 'n6', t: '≤ 6 kk', num: 1, v: R => R.n6 || 0 },
+  { k: 'n24', t: '24 kk', num: 1, v: R => R.n24 || 0 },
+  { k: 'match', t: 'Koko-osuma', num: 1, v: R => R.matchShare ?? -1 },
+  { k: 'plans', t: 'Kaavat', num: 1, v: R => R.plans ? R.plans.length : 0 },
+  { k: 'ev', t: 'Muutokset 30 pv', num: 1, v: R => R.events ? R.events.filter(e => e.date >= addD(NOW, -30)).length : 0 },
+];
+function drawPfTable() {
+  const rows = [...pfResults].sort((a, b) => { const c = PCOLS.find(c => c.k === pfSort.k), x = c.v(a), y = c.v(b); return (x > y ? 1 : x < y ? -1 : 0) * pfSort.dir; });
+  $('#pf-tbl thead').innerHTML = '<tr>' + PCOLS.map(c => `<th class="${c.num ? 'num' : ''}" data-k="${c.k}">${c.t}${pfSort.k === c.k ? (pfSort.dir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('') + '</tr>';
+  $('#pf-tbl tbody').innerHTML = rows.map(R => R.error ? `<tr><td>${esc(R.site.nimi)}</td><td>${esc(R.site.kuntaNimi || '')}</td><td colspan="9" class="est">${esc(R.error)}</td></tr>` :
+    `<tr class="click" data-id="${esc(R.site.id)}"><td>${esc(R.site.nimi)}<br><span class="est">${esc(R.site.osoite || '')}${R.site.apts ? ' · ' + n0(R.site.apts) + ' as.' : ''}</span></td><td>${esc(R.site.kuntaNimi || '')}</td>
+    <td class="num"><span class="pill ${R.level}">${R.risk}</span></td>
+    <td class="num"><b style="color:var(--${R.ratio == null ? 'muted' : R.ratio >= 2 ? 'bad' : R.ratio >= 1 ? 'warn' : 'good'})">${R.ratio == null ? '–' : isFinite(R.ratio) ? n1(R.ratio) + '×' : '∞'}</b></td>
+    <td class="num">${spct(R.supplyRate)}</td><td class="num">${spct(R.demandRate)}</td>
+    <td class="num">${R.n6 ? `<b style="color:var(--bad)">${n0(R.n6)}</b>` : '–'}</td><td class="num">${n0(R.n24)}</td>
+    <td class="num">${R.matchShare == null ? '–' : pct(R.matchShare)}</td><td class="num">${R.plans.length || '–'}</td><td class="num">${R.events.filter(e => e.date >= addD(NOW, -30)).length || '–'}</td></tr>`).join('');
+  const ok = pfResults.filter(R => !R.error);
+  $('#pf-sub').textContent = `${ok.filter(R => R.level === 'bad').length} korkea · ${ok.filter(R => R.level === 'warn').length} kohonnut · ${ok.filter(R => R.level === 'good').length} matala`;
 }
-
-function renderAlerts() {
-  const L = localStats(), K = kuntaStats(), M = demandStats(), out = [];
-  const rr = S.r < 1000 ? S.r + ' m' : S.r / 1000 + ' km';
-  if (L && M) {
-    const ratio = M.rate > 0 ? L.rate / M.rate : (L.n36.apts > 0 ? Infinity : 0);
-    const lvl = ratio >= 2 ? 'bad' : ratio >= 1 ? 'warn' : 'good';
-    out.push({ lvl, t: lvl === 'bad' ? 'Korkea paikallinen tarjontapaine' : lvl === 'warn' ? 'Kohonnut paikallinen tarjontapaine' : 'Paikallinen tarjonta kysynnän tahdissa',
-      d: `${rr} säteelle valmistuu seuraavan 3 vuoden aikana arviolta <b>${n0(L.n36.apts)} asuntoa</b>, eli <b>${pct(L.rate)}/v</b> nykyisestä noin ${n0(L.stock)} asunnon kannasta. Kunnan väestöennusteen mukainen asuntotarve kasvaa ${pct(M.rate)}/v${isFinite(ratio) ? ` (suhde ${n1(ratio)}×)` : ''}.` });
-  }
-  if (L && L.n24.apts > 0) {
-    const soon = S.local.filter(p => supplyOK(p) && p.e.date && p.e.kind !== 'done' && p.e.w && p.e.date < addM(NOW, 24)).sort((a, b) => b.apts - a.apts).slice(0, 3);
-    out.push({ lvl: L.stock && L.n24.apts / L.stock > 0.05 ? 'warn' : 'info', t: `Seuraavan 24 kk aikana valmistuu arviolta ${n0(L.n24.apts)} asuntoa`,
-      d: soon.map(p => `${n0(p.apts)} as. ${p.kaytto.toLowerCase()} ~${fmtM(p.e.date)} (${KIND_TXT[p.e.kind].toLowerCase()}, ${n0(p.dist)} m)`).join(' · ') });
-  }
-  const big = S.local.filter(p => supplyOK(p) && p.apts >= 100 && (p.e.kind === 'uc' || (p.e.kind === 'permit' && !p.e.stale)));
-  if (big.length) out.push({ lvl: 'warn', t: `${big.length} suurhanketta (≥ 100 asuntoa) tulossa säteelle`,
-    d: big.sort((a, b) => b.apts - a.apts).slice(0, 4).map(p => `${n0(p.apts)} as. · ${KIND_TXT[p.e.kind].toLowerCase()} · lupa ${fmtM(p.paatos)} · ${n0(p.dist)} m`).join('<br>') });
-  if (K && M) {
-    const cov = (K.uc + K.permW) / M.yrBase, ratio = K.avg5 / M.yrBase;
-    const lvl = ratio >= 1.3 ? 'warn' : ratio < 0.7 ? 'info' : 'good';
-    out.push({ lvl, t: `${S.kuntaName}: tuotanto ${pct(ratio)} väestöennusteen asuntotarpeesta`,
-      d: `Valmistuneita keskimäärin ${n0(K.avg5)} as./v (${NOW_Y - 5}–${NOW_Y - 1}) vs. tarve ${n0(M.yrBase)}–${n0(M.yrTrend)} as./v vuoteen 2040. Rakenteilla ${n0(K.uc)} ja luvitettuja painotettuna ${n0(K.permW)} asuntoa, mikä kattaa noin ${n1(cov)} vuoden tarpeen.` });
-  }
-  if (L && L.stale.length) out.push({ lvl: 'info', t: `${L.stale.length} vanhaa aloittamatonta lupaa (${n0(L.stale.reduce((s, p) => s + p.apts, 0))} as.)`,
-    d: 'Lupa yli 4 v vanha eikä aloitusta ole kirjattu. Näitä ei lasketa ennusteeseen. Tarkista hankkeen tila kunnan lupapalvelusta.' });
-  const order = { bad: 0, warn: 1, info: 2, good: 3 };
-  out.sort((a, b) => order[a.lvl] - order[b.lvl]);
-  $('#alerts').innerHTML = out.length ? out.map(a => `<div class="alert ${a.lvl}"><div class="bar"></div><div><div class="t">${esc(a.t)}</div><div class="d">${a.d}</div></div></div>`).join('')
-    : '<div class="empty">Ladataan…</div>';
-  $('#alerts-sub').textContent = out.length ? `${out.filter(a => a.lvl === 'bad' || a.lvl === 'warn').length} huomiota` : '';
+function calendarData(ok) {
+  const months = []; for (let i = 0; i < 24; i++) { const m = addM(new Date(NOW.getFullYear(), NOW.getMonth(), 1), i); months.push(m); }
+  const proj = dedupeProjects(ok, p => active(p) && p.e.date && p.e.date < addM(NOW, 24));
+  const key = dt => dt.getFullYear() * 12 + dt.getMonth();
+  const byM = {}; proj.forEach(x => { const k = key(x.p.e.date); (byM[k] = byM[k] || []).push(x); });
+  return { months, byM, key, proj };
 }
-
-function renderTimeline() {
-  if (!S.A) return;
+function drawCalendar(ok) {
+  const { months, byM, key } = calendarData(ok);
   chartBase();
-  const tl = timeline(S.local, S.A), L = localStats();
-  mkChart('ch-local', barCfg(tl));
-  $('#tl-local-sub').textContent = L ? `kanta nyt ~${n0(L.stock)} as. · rakenteilla ${n0(L.uc)} · luvitettu ${n0(L.permitRaw)} (ennen painotusta)` : '';
-  const K = kuntaStats(), M = demandStats();
-  if (K) {
-    const extra = M ? [{ type: 'line', label: 'Asuntotarve / v (väestöennuste)', data: YEARS.map(y => y >= 2025 ? Math.round(M.yrBase) : null),
-      borderColor: css('--need'), borderWidth: 2, pointRadius: 0, stack: 'n', order: 1 }] : [];
-    mkChart('ch-kunta', barCfg(K.t, extra));
-    $('#tl-kunta-sub').textContent = `${S.kuntaName} · ka. ${n0(K.avg5)} as./v viim. 5 v · rakenteilla ${n0(K.uc)}`;
-  }
-  const A = S.A, a = (k, x) => A[k][x];
-  $('#assump').innerHTML = ['Kerrostalo', 'Pientalo'].map(k => `
-    <div class="row"><div class="k">${k}: viive lupapäätöksestä aloitukseen</div><div class="v">${n1(a(k, 'lag'))} kk</div><div class="x">mediaani, n = ${a(k, 'lagN')}${a(k, 'lagN') < 15 ? ' (liian vähän → oletus)' : ''}</div></div>
-    <div class="row"><div class="k">${k}: rakennusaika aloituksesta valmistumiseen</div><div class="v">${n1(a(k, 'build'))} kk</div><div class="x">mediaani, n = ${a(k, 'buildN')}${a(k, 'buildN') < 15 ? ' (liian vähän → oletus)' : ''}</div></div>
-    <div class="row"><div class="k">${k}: luvitettujen toteutumisaste</div><div class="v">${pct(a(k, 'real'))}</div><div class="x">3–6 v sitten luvitetuista asunnoista aloitettu (${n0(a(k, 'realApts'))} as.)${a(k, 'realApts') < 50 ? ' – liian vähän, oletus 80 %' : ''}</div></div>`).join('') +
-    `<div class="row"><div class="k">Aloittamaton lupa → epävarma</div><div class="v">&gt; ${STALE_MONTHS} kk</div><div class="x">ei lasketa ennusteeseen, ellei jatkoaikaa ole kirjattu</div></div>`;
+  mkChart('ch-cal', { type: 'bar', data: { labels: months.map(m => `${m.getMonth() + 1}/${String(m.getFullYear()).slice(2)}`), datasets: [
+    { label: 'Rakenteilla (arvio)', data: months.map(m => Math.round((byM[key(m)] || []).filter(x => x.p.e.kind === 'uc').reduce((s, x) => s + x.p.apts, 0))), backgroundColor: css('--st-uc'), stack: 's' },
+    { label: 'Luvitettu, painotettu', data: months.map(m => Math.round((byM[key(m)] || []).filter(x => x.p.e.kind === 'permit').reduce((s, x) => s + x.p.apts * x.p.e.w, 0))), backgroundColor: css('--st-permit'), stack: 's' }] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: legendOpt, tooltip: tipOpt }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } } } });
+  $('#cal-tbl thead').innerHTML = '<tr><th>Kuukausi</th><th>Hanke</th><th class="num">Asuntoja</th><th class="num">m²/as</th><th>Tila</th><th>Lähimmät kohteet</th></tr>';
+  const rows = []; months.forEach(m => (byM[key(m)] || []).sort((a, b) => b.p.apts - a.p.apts).forEach(x => rows.push({ m, x })));
+  $('#cal-tbl tbody').innerHTML = rows.length ? rows.map(({ m, x }) => { const p = x.p, six = p.e.date < addM(NOW, 6); return `<tr><td>${six ? '<b style="color:var(--bad)">' : ''}${m.getMonth() + 1}/${m.getFullYear()}${six ? '</b>' : ''}</td><td class="wrap">${p.addr ? esc(p.addr) : esc(p.kaytto)}<br><span class="est">kiint. ${esc(p.kiint || '')}</span></td><td class="num">${n0(p.apts)}</td><td class="num">${p.m2 ? n0(p.m2) : '–'}</td><td>${p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu ' + pct(p.e.w)}</td><td class="wrap">${x.sites.map(s => `<a href="#view=kohde&id=${encodeURIComponent(s.R.site.id)}">${esc(s.R.site.nimi)}</a> ${n0(s.dist)} m${s.R.site.m2 && p.m2 && Math.abs(p.m2 - s.R.site.m2) <= SIZE_TOL ? ' <span class="pill warn">koko</span>' : ''}`).join(', ')}</td></tr>`; }).join('') : '<tr><td colspan="6" class="empty">Ei tunnettuja valmistumisia 24 kk sisällä.</td></tr>';
+}
+function drawEvents() {
+  const days = +$('#ev-days').value, ev = dedupeEvents(pfResults.filter(R => !R.error), days);
+  $('#ev-tbl thead').innerHTML = '<tr><th>Päivä</th><th>Muutos</th><th class="num">As.</th><th>Hanke</th><th>Kohteet</th></tr>';
+  $('#ev-tbl tbody').innerHTML = ev.length ? ev.map(x => `<tr><td>${fmtD(x.e.date)}</td><td>${esc(x.e.type)}</td><td class="num">${n0(x.e.p.apts)}</td><td class="wrap">${x.e.p.addr ? esc(x.e.p.addr) : esc(x.e.p.kaytto)}</td><td class="wrap">${x.sites.map(esc).join(', ')}</td></tr>`).join('') : `<tr><td colspan="5" class="empty">Ei muutoksia viimeisen ${days} pv aikana.</td></tr>`;
+  $('#ev-sub').textContent = `${ev.length} muutosta · ${days} pv`;
 }
 
-function renderDemand() {
-  const L = localStats(), K = kuntaStats(), M = demandStats(), D = S.demand;
-  if (!M || !D) { $('#dm-rows').innerHTML = '<div class="empty">Ladataan väestöennustetta…</div>'; return; }
-  const rr = S.r < 1000 ? S.r + ' m' : S.r / 1000 + ' km';
-  const ratio = L && M.rate > 0 ? L.rate / M.rate : null;
-  const R = (k, v, x, hl) => `<div class="row${hl ? ' hl' : ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="x">${x}</div></div>`;
-  $('#dm-sub').textContent = `${S.kuntaName} · väestöennuste 2024 · asuntokunnat 2025`;
-  $('#dm-rows').innerHTML = [
-    L ? R(`Paikallinen kannan kasvu, ${rr}`, pct(L.rate) + '/v', `seuraavan 3 v aikana valmistuvat ${n0(L.n36.apts)} as. / 3 / nykyinen kanta ${n0(L.stock)} as.`, true) : '',
-    R('Kunnan asuntotarpeen kasvu', pct(M.rate) + '/v', `${n0(M.yrBase)} as./v / ${n0(D.ak25)} asuntokuntaa`, true),
-    ratio != null ? R('Suhde (paikallinen / kunta)', n1(ratio) + '×', ratio >= 2 ? 'lähialueen kanta kasvaa selvästi kysyntää nopeammin → vuokrauskilpailu kiristyy' : ratio >= 1 ? 'lähialueen kanta kasvaa kysyntää nopeammin' : 'lähialueen tarjonta jää kunnan kysynnän kasvusta', true) : '',
-    R('Väkiluku 2025 → 2040', `${pct(M.popChg)}`, `${n0(M.p25.total)} → ${n0(M.p40.total)} (Tilastokeskuksen ennuste 2024)`),
-    R('20–34-vuotiaat 2025 → 2040', pct(M.youngChg), `${n0(M.p25.young)} → ${n0(M.p40.young)} · vuokra-asumisen ydinikäryhmä`),
-    R('Asuntokunnan keskikoko', `${M.hs25.toFixed(2).replace('.', ',')} hlö`,`2015: ${M.hs15.toFixed(2).replace('.', ',')} · 2025: ${M.hs25.toFixed(2).replace('.', ',')} · trendi ${pct(M.g)}/v`),
-    R('Asuntotarve 2025–2040', `${n0(M.needBase)}`, `perusura (koko vakio) · ${n0(M.needTrend)} jos asuntokuntien koon trendi jatkuu`),
-    K ? R('Kunnan tuotanto viim. 5 v', `${n0(K.avg5)} /v`, `vs. tarve ${n0(M.yrBase)}–${n0(M.yrTrend)} as./v`) : '',
-    K ? R('Kunnan tuotanto seuraavat 3 v (tunnettu putki)', `${n0(K.next3)} /v`, `rakenteilla ${n0(K.uc)} + luvitettu painotettuna ${n0(K.permW)} · ei sisällä vielä luvittamattomia`) : R('Kunnan hankkeet', '<span class="spin"></span>', 'haetaan Ryhdistä…'),
-  ].join('');
-  $('#pop-sub').textContent = S.kuntaName;
-  chartBase();
-  mkChart('ch-pop', { type: 'line', data: { labels: D.series.map(s => s.y), datasets: [
-    { label: 'Väkiluku', data: D.series.map(s => s.total), borderColor: css('--accent'), backgroundColor: css('--accent'), pointRadius: 0, borderWidth: 2, yAxisID: 'y' },
-    { label: '20–34-vuotiaat', data: D.series.map(s => s.young), borderColor: css('--st-uc'), backgroundColor: css('--st-uc'), pointRadius: 0, borderWidth: 2, borderDash: [5, 4], yAxisID: 'y2' }] },
-    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${n0(c.parsed.y)}` } } },
-      scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => nf.format(v) } }, y2: { position: 'right', grid: { display: false }, ticks: { callback: v => nf.format(v) } } } } });
-  if (K) {
-    const yrs = YEARS.filter(y => y >= 2018);
-    mkChart('ch-demand', { type: 'bar', data: { labels: yrs, datasets: [
-      { label: 'Valmistunut', data: yrs.map(y => Math.round(K.t.done[y])), backgroundColor: css('--st-done'), stack: 's' },
-      { label: 'Rakenteilla (arvio)', data: yrs.map(y => Math.round(K.t.uc[y])), backgroundColor: css('--st-uc'), stack: 's' },
-      { label: 'Luvitettu (painotettu arvio)', data: yrs.map(y => Math.round(K.t.permit[y])), backgroundColor: css('--st-permit'), stack: 's' },
-      { type: 'line', label: 'Tarve, perusura', data: yrs.map(() => Math.round(M.yrBase)), borderColor: css('--need'), borderWidth: 2, pointRadius: 0, stack: 'n1' },
-      { type: 'line', label: 'Tarve, asuntokuntien koon trendi', data: yrs.map(() => Math.round(M.yrTrend)), borderColor: css('--need2'), borderWidth: 2, borderDash: [6, 4], pointRadius: 0, stack: 'n2' }] },
-      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${n0(c.parsed.y)}` } } },
-        scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { callback: v => nf.format(v) } } } } });
-  }
+// ======================= Export =======================
+const csvQ = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+function dl(name, text, type = 'text/csv;charset=utf-8') { const b = new Blob([type.startsWith('text/csv') ? '﻿' + text : text], { type }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+const slug = s => String(s || 'kohde').replace(/[^\wåäö]+/gi, '_').slice(0, 60);
+function detailCsv(R) {
+  const h = ['tila', 'toimenpide', 'kayttotarkoitus', 'osoite', 'asuntoja', 'm2_per_asunto', 'kerrosala', 'lupapaatos', 'aloitus', 'valmistunut', 'valmistuminen_arvio', 'toteutumistodennakoisyys', 'etaisyys_m', 'koko_osuma', 'kiinteistotunnus', 'lupatunnus', 'lat', 'lon'];
+  return [h.join(';'), ...R.rows.map(p => [KIND_TXT[p.e.kind], p.laji, p.kaytto, p.addr, p.apts, p.m2 ? p.m2.toFixed(1) : '', p.ka, fmtD(p.paatos), fmtD(p.aloitus), fmtD(p.valmis), p.e.kind !== 'done' && p.e.date ? fmtM(p.e.date) : '', p.e.kind === 'permit' ? p.e.w.toFixed(2) : '', Math.round(p.dist), p.m2 && R.site.m2 ? (Math.abs(p.m2 - R.site.m2) <= SIZE_TOL ? 'kyllä' : 'ei') : '', p.kiint, p.lupa, p.lat, p.lon].map(csvQ).join(';'))].join('\n');
+}
+function detailJson(R) {
+  return JSON.stringify({ kohde: R.site, sade_m: R.r, kunta: R.kc.name, haettu: NOW.toISOString(), asuntokanta: R.stock, tarjonta_pv: R.supplyRate, kysynta_pv: R.demandRate, kunta_kysynta_pv: R.kuntaRate, suhde: isFinite(R.ratio) ? R.ratio : null, riski: R.risk, valmistuu_6kk: R.n6, valmistuu_24kk: R.n24, koko_osuma: R.matchShare,
+    paavo: R.pv, kaavat: R.plans, hankkeet: R.rows.map(p => ({ tila: KIND_TXT[p.e.kind], kaytto: p.kaytto, osoite: p.addr, asuntoja: p.apts, m2: p.m2, lupa: p.paatos, aloitus: p.aloitus, valmistunut: p.valmis, arvio: p.e.date, paino: p.e.w, etaisyys: Math.round(p.dist), kiint: p.kiint })) }, null, 1);
+}
+function pfCsv() {
+  const h = ['kohde', 'osoite', 'kunta', 'asunnot', 'riski', 'tarjonta_kysynta_suhde', 'tarjonta_pv', 'kysynta_pv_paavo', 'kysynta_pv_kunta', 'valmistuu_6kk', 'valmistuu_24kk', 'koko_osuma', 'kaavat_vireilla', 'muutokset_30pv'];
+  return [h.join(';'), ...pfResults.filter(R => !R.error).map(R => [R.site.nimi, R.site.osoite, R.site.kuntaNimi, R.site.apts, R.risk, R.ratio == null ? '' : isFinite(R.ratio) ? R.ratio.toFixed(2) : 'inf', R.supplyRate?.toFixed(4), R.demandRate?.toFixed(4), R.kuntaRate?.toFixed(4), Math.round(R.n6), Math.round(R.n24), R.matchShare == null ? '' : R.matchShare.toFixed(2), R.plans.length, R.events.filter(e => e.date >= addD(NOW, -30)).length].map(csvQ).join(';'))].join('\n');
+}
+function calCsv() {
+  const { proj } = calendarData(pfResults.filter(R => !R.error));
+  const h = ['arvioitu_valmistuminen', 'tila', 'toteutumistod', 'osoite', 'kayttotarkoitus', 'asuntoja', 'm2_per_asunto', 'kiinteistotunnus', 'lahimmat_kohteet'];
+  return [h.join(';'), ...proj.sort((a, b) => a.p.e.date - b.p.e.date).map(x => [fmtM(x.p.e.date), KIND_TXT[x.p.e.kind], x.p.e.w.toFixed(2), x.p.addr, x.p.kaytto, x.p.apts, x.p.m2 ? x.p.m2.toFixed(1) : '', x.p.kiint, x.sites.map(s => `${s.R.site.nimi} (${Math.round(s.dist)} m)`).join(' | ')].map(csvQ).join(';'))].join('\n');
 }
 
-// ======================= Pääajo =======================
-let runId = 0;
-async function run(q, r, force = false) {
-  const my = ++runId;
-  Object.keys(ST).forEach(k => delete ST[k]);
-  $('#q').value = q; $('#radius').value = String(r);
-  S.q = q; S.r = r; S.local = []; S.stock = null; S.kuntaRows = null; S.A = null; S.demand = null; S.sel = null;
-  $('#alerts').innerHTML = '<div class="empty"><span class="spin"></span> Haetaan…</div>';
-  location.hash = `q=${encodeURIComponent(q)}&r=${r}`;
-  status('geo', 'run', 'Osoite');
-  let g;
-  try { g = await geocode(q); } catch (e) {
-    status('geo', 'err', 'Osoite: ' + e.message);
-    S.lat = null; S.label = ''; S.kuntaName = ''; $('#crumb').innerHTML = 'Ei kohdetta<small>haku epäonnistui</small>';
-    $('#tbl tbody').innerHTML = ''; $('#tbl-sub').textContent = ''; $('#map-sub').textContent = ''; if (layerG) layerG.clearLayers();
-    const hint = /Selain esti|lyhytlinkki|ei vastannut/.test(e.message) ? '' : ' Kokeile muotoa "Katu 12, Kaupunki", koordinaatteja tai Google Mapsin pitkää linkkiä.';
-    $('#alerts').innerHTML = `<div class="empty">${esc(e.message)}${hint}</div>`; return; }
-  if (my !== runId) return;
-  Object.assign(S, { lat: g.lat, lon: g.lon, label: g.label, kunta: g.kunta, geoSource: g.src });
-  status('geo', 'ok', `Osoite (${g.src})${g.alt && g.alt.length ? ' – myös: ' + g.alt.join(', ') : ''}`);
-  const bbox = bboxAround(g.lat, g.lon, r);
-  status('local', 'run', 'Hankkeet säteellä'); status('stock', 'run', 'Asuntokanta');
-  const t0 = performance.now();
-  const [pf, sf] = await Promise.allSettled([
-    ryhti('avoimet_lupa_rakennukset', PROJ_FILTER, { bbox, limit: 3000 }),
-    ryhti('avoimet_rakennukset', 'huoneistojen_lukumaara>0', { bbox, limit: 10000 })]);
-  if (my !== runId) return;
-  if (pf.status === 'fulfilled') {
-    S.local = pf.value.map(norm).filter(p => p.lat != null).map(p => (p.dist = haversine(g.lat, g.lon, p.lat, p.lon), p)).filter(p => p.dist <= r);
-    status('local', 'ok', `${S.local.length} hanketta (${Math.round(performance.now() - t0)} ms)`);
-  } else status('local', 'err', 'Hankkeet: ' + pf.reason.message);
-  if (sf.status === 'fulfilled') {
-    const inR = sf.value.map(f => ({ p: f.properties, c: f.geometry && f.geometry.coordinates })).filter(x => x.c && haversine(g.lat, g.lon, x.c[1], x.c[0]) <= r);
-    S.stock = inR.filter(x => isRes(x.p.paaasiallinen_kayttotarkoitus)).reduce((s, x) => s + (x.p.huoneistojen_lukumaara || 0), 0);
-    if (!S.kunta) { const cnt = {}; inR.forEach(x => cnt[x.p.kuntanumero] = (cnt[x.p.kuntanumero] || 0) + 1); S.kunta = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || null; }
-    status('stock', 'ok', `Kanta ${n0(S.stock)} as.`);
-  } else status('stock', 'err', 'Asuntokanta: ' + sf.reason.message);
-  if (!S.kunta && S.local.length) S.kunta = S.local[0].kunta;
-  if (!S.kunta) { status('kunta', 'err', 'Kuntaa ei tunnistettu'); return; }
-  // väliaikaiset oletukset, jotta kartta piirtyy heti
-  S.A = assumptions([]); renderAll();
-  status('kunta', 'run', `Kunnan ${S.kunta} hankkeet (suurissa kunnissa ~10 s)`); status('px', 'run', 'Väestöennuste');
-  const kP = kuntaRows(S.kunta, force).then(res => {
-    if (my !== runId) return;
-    S.kuntaRows = res.rows; S.A = assumptions(res.rows); S.kuntaRows.forEach(p => p.e = expected(p, S.A));
-    status('kunta', 'ok', `Kunta: ${n0(res.rows.length)} hanketta${res.cached ? ' (välimuisti ' + fmtD(new Date(res.cached)) + ')' : ''}`);
-    renderAll();
-  }).catch(e => status('kunta', 'err', 'Kunnan hankkeet: ' + e.message));
-  const dP = demandData(S.kunta).then(D => {
-    if (my !== runId) return;
-    S.demand = D; S.kuntaName = D.name; status('px', 'ok', 'Väestöennuste ' + D.name); renderAll();
-  }).catch(e => status('px', 'err', 'Tilastokeskus: ' + e.message));
-  await Promise.allSettled([kP, dP]);
+// ======================= Automaatiorajapinta (Claude-ajastus) =======================
+// window.SupplyMonitor.runPortfolio() -> digest-teksti; chunk(i) palauttaa ~900 merkin palan.
+function digest({ days = 7 } = {}) {
+  const ok = pfResults.filter(R => !R.error), L = [];
+  L.push(`SUPPLY MONITOR ${fmtD(NOW)} · ${PF ? PF.nimi : ''} · ${ok.length} kohdetta · säde ${rr(+$('#pf-radius').value)}`);
+  const soon = dedupeProjects(ok, p => active(p) && p.e.date && p.e.date < addM(NOW, 6)).sort((a, b) => a.p.e.date - b.p.e.date);
+  L.push(`VALMISTUU ALLE 6 KK (${soon.length}):`);
+  soon.forEach(x => L.push(`- ~${fmtM(x.p.e.date)} | ${x.p.apts} as | ${x.p.m2 ? Math.round(x.p.m2) + ' m2/as' : '-'} | ${x.p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu'} | ${x.p.addr || x.p.kaytto} | kiint ${x.p.kiint} | id ${x.p.id} | kohteet: ${x.sites.map(s => `${s.R.site.nimi} ${Math.round(s.dist)}m${s.R.site.m2 && x.p.m2 && Math.abs(x.p.m2 - s.R.site.m2) <= SIZE_TOL ? ' KOKO-OSUMA' : ''}`).join('; ')}`));
+  const ev = dedupeEvents(ok, days);
+  L.push(`MUUTOKSET ${days} PV (${ev.length}):`);
+  ev.forEach(x => L.push(`- ${fmtD(x.e.date)} | ${x.e.type} | ${x.e.p.apts} as | ${x.e.p.addr || x.e.p.kaytto} | id ${x.e.p.id} | kohteet: ${x.sites.join('; ')}`));
+  L.push('RISKI (top 10):');
+  [...ok].sort((a, b) => b.risk - a.risk).slice(0, 10).forEach(R => L.push(`- ${R.site.nimi} | ${R.risk} p | suhde ${R.ratio == null ? '-' : isFinite(R.ratio) ? R.ratio.toFixed(1) : 'inf'} | tarjonta ${pct(R.supplyRate)}/v kysyntä ${pct(R.demandRate)}/v | 6kk ${Math.round(R.n6)} 24kk ${Math.round(R.n24)} | koko-osuma ${R.matchShare == null ? '-' : pct(R.matchShare)} | kaavat ${R.plans.length}`));
+  const addrs = [...new Set(dedupeProjects(ok, p => active(p) && p.addr).map(x => x.p.addr))];
+  L.push(`SEURATTAVAT OSOITTEET (aktiiviset hankkeet, ${addrs.length}): ${addrs.join(' | ')}`);
+  return L.join('\n');
 }
+let lastDigest = '';
+window.SupplyMonitor = {
+  async runPortfolio(o = {}) { await runPortfolio(o); lastDigest = digest(o); return { ok: true, length: lastDigest.length, chunks: Math.ceil(lastDigest.length / 900) }; },
+  chunk(i, size = 900) { return lastDigest.slice(i * size, (i + 1) * size); },
+  digest: o => (lastDigest = digest(o)),
+  results: () => pfResults, version: '2.0'
+};
 
-// ======================= Claude-kerros =======================
+// ======================= Claude =======================
 let convo = [];
 function contextText() {
-  const L = localStats(), K = kuntaStats(), M = demandStats(), rr = S.r < 1000 ? S.r + ' m' : S.r / 1000 + ' km';
-  const act = S.local.filter(p => isRes(p.kaytto) && p.apts > 0 && p.e && p.e.kind !== 'lapsed').sort((a, b) => (a.e.date ? +a.e.date : 9e15) - (b.e.date ? +b.e.date : 9e15)).slice(0, 50);
-  const lines = [
-    `KOHDE: ${S.label} (${S.kuntaName}, kuntanumero ${S.kunta}), säde ${rr}. Päivä ${fmtD(NOW)}.`,
-    L ? `PAIKALLINEN: nykyinen asuntokanta säteellä ~${n0(L.stock)} as. Valmistunut viim. 36 kk: ${n0(L.done3)} as. Rakenteilla: ${n0(L.uc)} as. Luvitettu, ei aloitettu (ei-vanhentunut): ${n0(L.permitRaw)} as. Arvio valmistuvista seuraavat 24 kk: ${n0(L.n24.apts)} as., seuraavat 36 kk: ${n0(L.n36.apts)} as. (${pct(L.rate)}/v kannasta).` : '',
-    M ? `KYSYNTÄ (kunta): väkiluku 2025 ${n0(M.p25.total)} → 2040 ${n0(M.p40.total)} (${pct(M.popChg)}); 20–34-v ${pct(M.youngChg)}. Asuntokunnan koko 2015 ${M.hs15.toFixed(2)} → 2025 ${M.hs25.toFixed(2)}. Asuntotarve 2025–2040: ${n0(M.needBase)} (perusura) – ${n0(M.needTrend)} (koon trendi) eli ${n0(M.yrBase)}–${n0(M.yrTrend)} as./v; kasvu ${pct(M.rate)}/v asuntokunnista.` : '',
-    K ? `TARJONTA (kunta): valmistunut ka. ${n0(K.avg5)} as./v viim. 5 v; rakenteilla ${n0(K.uc)}; luvitettu painotettuna ${n0(K.permW)}; tunnettu putki seuraavat 3 v ${n0(K.next3)} as./v (ei sisällä vielä luvittamattomia).` : '',
-    S.A ? `OLETUKSET: kerrostalo viive ${n1(S.A.Kerrostalo.lag)} kk, rakennusaika ${n1(S.A.Kerrostalo.build)} kk, toteutumisaste ${pct(S.A.Kerrostalo.real)}; pientalo rakennusaika ${n1(S.A.Pientalo.build)} kk.` : '',
-    'HANKKEET (asuin, säteellä): tila | käyttö | asuntoja | kerrosala | lupapäätös | aloitus | valmistuminen (toteuma/arvio) | etäisyys | kiinteistötunnus',
-    ...act.map(p => `${KIND_TXT[p.e.kind]}${p.e.stale ? ' (vanha lupa, epävarma)' : ''} | ${p.kaytto} | ${p.apts} | ${p.ka || ''} | ${fmtD(p.paatos)} | ${fmtD(p.aloitus)} | ${p.e.kind === 'done' ? fmtD(p.valmis) : p.e.date ? '~' + fmtM(p.e.date) : '–'} | ${Math.round(p.dist)} m | ${p.kiint || ''}`),
-    'LÄHTEET: Ryhti (SYKE) avoimet_lupa_rakennukset & avoimet_rakennukset; Tilastokeskus 14wx & 15fd. Valmistumisajat ovat malliarvioita.'];
-  return lines.filter(Boolean).join('\n');
+  const v = curView;
+  if (v === 'portfolio' && pfResults.length) return digest({ days: 30 });
+  const R = curR; if (!R) return 'Ei valittua kohdetta.';
+  const act = R.rows.filter(p => isRes(p.kaytto) && p.apts > 0 && p.e.kind !== 'lapsed').sort((a, b) => (a.e.date ? +a.e.date : 9e15) - (b.e.date ? +b.e.date : 9e15)).slice(0, 50);
+  return [`KOHDE: ${R.site.nimi || R.site.label} (${R.kc.name}), säde ${rr(R.r)}, ${fmtD(NOW)}.${R.site.apts ? ` Omia asuntoja ${R.site.apts}, keskikoko ${R.site.m2} m².` : ''}`,
+    `TARJONTA vs KYSYNTÄ: paikallinen tarjonta ${pct(R.supplyRate)}/v (3 v putki ${Math.round(R.n36)} as. / kanta ${R.stock}), paikallinen kysyntä ${pct(R.demandRate)}/v (Paavo ${R.pv ? R.pv.pc : ''} taloudet 2019→2024), kunnan ennuste ${pct(R.kuntaRate)}/v. Suhde ${R.ratio == null ? '-' : isFinite(R.ratio) ? R.ratio.toFixed(2) : 'inf'}. Riski ${R.risk}/100.`,
+    `VALMISTUU: alle 6 kk ${Math.round(R.n6)} as., 24 kk ${Math.round(R.n24)} as. Koko-osuma ${R.matchShare == null ? '-' : pct(R.matchShare)}.`,
+    `KAAVAT VIREILLÄ: ${R.plans.map(p => p.name + ' (' + (p.stage || '') + ')').join('; ') || 'ei'}`,
+    'HANKKEET: tila | käyttö | osoite | as | m2/as | lupa | aloitus | valmistuminen | etäisyys',
+    ...act.map(p => `${KIND_TXT[p.e.kind]}${p.e.stale ? ' (vanha lupa)' : ''} | ${p.kaytto} | ${p.addr || '-'} | ${p.apts} | ${p.m2 ? Math.round(p.m2) : '-'} | ${fmtD(p.paatos)} | ${fmtD(p.aloitus)} | ${p.e.kind === 'done' ? fmtD(p.valmis) : p.e.date ? '~' + fmtM(p.e.date) : '-'} | ${Math.round(p.dist)} m`),
+    'LÄHTEET: Ryhti (Syke), Tilastokeskus (Paavo, 14wx, 15fd), kuntien kaavarajapinnat. Valmistumisajat ovat malliarvioita.'].join('\n');
 }
-const SYSTEM = 'Olet kiinteistösijoittajan (vuokra-asuntosalkku) analyytikko Suomessa. Vastaat suomeksi, tiiviisti ja konkreettisesti. Käytä vain annettua dataa ja kerro, kun jokin on arvio. Älä keksi hankkeiden nimiä tai rakennuttajia: data sisältää vain kiinteistötunnukset. Muotoile lyhyinä kappaleina tai ranskalaisin viivoin.';
-function md(s) {
-  const e = esc(s).replace(/\*{2}(.+?)\*{2}/g, '<b>$1</b>');
-  return e.split(/\n{2,}/).map(b => /^\s*[-•*] /m.test(b) ? '<ul>' + b.split('\n').filter(x => x.trim()).map(x => '<li>' + x.replace(/^\s*[-•*]\s+/, '') + '</li>').join('') + '</ul>' : '<p>' + b.replace(/\n/g, '<br>') + '</p>').join('');
-}
+const SYSTEM = 'Olet kiinteistösijoittajan (vuokra-asuntosalkku) analyytikko Suomessa. Vastaat suomeksi, tiiviisti ja konkreettisesti. Käytä vain annettua dataa ja kerro, kun jokin on arvio. Älä keksi hankkeiden nimiä tai rakennuttajia. Muotoile lyhyinä kappaleina tai ranskalaisin viivoin.';
+function md(s) { const e = esc(s).replace(/\*{2}(.+?)\*{2}/g, '<b>$1</b>'); return e.split(/\n{2,}/).map(b => /^\s*[-•*] /m.test(b) ? '<ul>' + b.split('\n').filter(x => x.trim()).map(x => '<li>' + x.replace(/^\s*[-•*]\s+/, '') + '</li>').join('') + '</ul>' : '<p>' + b.replace(/\n/g, '<br>') + '</p>').join(''); }
 function addMsg(txt, me) { const el = document.createElement('div'); el.className = 'msg' + (me ? ' me' : ''); el.innerHTML = me ? '<p>' + esc(txt) + '</p>' : md(txt); $('#ai-b').appendChild(el); el.scrollIntoView({ block: 'end' }); return el; }
 async function askClaude(q) {
-  if (S.lat == null) { addMsg('Hae ensin osoite.', false); return; }
-  const key = store.get('tm_ai_key'), model = store.get('tm_ai_model') || 'claude-sonnet-5-5';
-  if (!key) { $('#ai-set').classList.add('open'); addMsg('Lisää API-avain asetuksiin (⚙) tai käytä "Kopioi Claudelle" ja liitä kysymys claude.ai:hin.', false); return; }
-  addMsg(q, true);
-  const first = !convo.length;
+  const key = store.get('sm_ai_key'), model = store.get('sm_ai_model') || 'claude-sonnet-5-5';
+  if (!key) { $('#ai-set').classList.add('open'); addMsg('Lisää API-avain asetuksiin (⚙) tai käytä "Kopioi Claudelle".', false); return; }
+  addMsg(q, true); const first = !convo.length;
   convo.push({ role: 'user', content: first ? `DATA:\n${contextText()}\n\nKYSYMYS: ${q}` : q });
   const el = addMsg('…', false);
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model, max_tokens: 1500, system: SYSTEM, messages: convo }) });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error ? j.error.message : 'HTTP ' + r.status);
-    const txt = j.content.filter(c => c.type === 'text').map(c => c.text).join('');
-    convo.push({ role: 'assistant', content: txt }); el.innerHTML = md(txt);
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model, max_tokens: 1500, system: SYSTEM, messages: convo }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error ? j.error.message : 'HTTP ' + r.status);
+    const txt = j.content.filter(c => c.type === 'text').map(c => c.text).join(''); convo.push({ role: 'assistant', content: txt }); el.innerHTML = md(txt);
   } catch (e) { convo.pop(); el.innerHTML = `<p style="color:var(--bad)">Virhe: ${esc(e.message)}</p>`; }
 }
 
-// ======================= Tapahtumat =======================
-function setView(v) {
-  document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('on', a.dataset.view === v));
-  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
-  if (v === 'projects' && map) setTimeout(() => { map.invalidateSize(); if (circle && S.lat != null) map.fitBounds(circle.getBounds(), { padding: [20, 20] }); }, 0);
-  store.set('tm_view', v);
+// ======================= Reititys =======================
+let curView = 'portfolio', detailRun = 0;
+function go(state, replace) {
+  const h = new URLSearchParams(); h.set('view', state.view);
+  if (state.id) h.set('id', state.id); if (state.q) h.set('q', state.q); if (state.r) h.set('r', state.r);
+  const s = '#' + h.toString();
+  if (location.hash !== s) { if (replace) history.replaceState(null, '', s); else location.hash = s; }
+  route();
 }
-function savedList() { const l = store.get('tm_saved') || []; $('#saved').innerHTML = l.map(x => `<option value="${esc(x)}">`).join(''); return l; }
-document.querySelectorAll('.nav a').forEach(a => a.addEventListener('click', () => setView(a.dataset.view)));
-$('#search').addEventListener('submit', e => { e.preventDefault(); const q = $('#q').value.trim(); if (q) { convo = []; run(q, +$('#radius').value); } });
-$('#radius').addEventListener('change', () => { if (S.q) { convo = []; run(S.q, +$('#radius').value); } });
-$('#save').addEventListener('click', () => { const q = $('#q').value.trim(); if (!q) return; const l = savedList().filter(x => x !== q); l.unshift(q); store.set('tm_saved', l.slice(0, 30)); savedList(); $('#save').textContent = '★'; setTimeout(() => $('#save').textContent = '☆', 1200); });
-$('#refresh').addEventListener('click', () => { if (S.q) run(S.q, S.r, true); });
-function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1800); }
-document.addEventListener('click', e => { const b = e.target.closest('.ex-btn'); if (b) { convo = []; run(b.textContent, +$('#radius').value); } });
-$('#share').addEventListener('click', async () => {
-  if (!S.q) { toast('Hae ensin osoite'); return; }
-  try { await navigator.clipboard.writeText(location.href); toast('Jakolinkki kopioitu'); } catch (e) { toast('Kopioi linkki osoiteriviltä'); }
+async function route() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  let view = h.get('view') || (h.get('q') ? 'haku' : 'portfolio');
+  if (view === 'portfolio' && !loadPortfolio() && h.get('view') == null) view = 'haku';
+  curView = view; convo = [];
+  document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('on', a.dataset.view === view));
+  $('#v-portfolio').classList.toggle('on', view === 'portfolio'); $('#v-detail').classList.toggle('on', view !== 'portfolio');
+  $('#ctl-portfolio').hidden = view !== 'portfolio'; $('#ctl-kohde').hidden = view !== 'kohde'; $('#ctl-haku').hidden = view !== 'haku';
+  if (view === 'portfolio') {
+    const has = !!loadPortfolio(); $('#pf-empty').hidden = has; $('#pf-main').hidden = !has;
+    if (!has) { $('#crumb').innerHTML = 'Portfolio<small>ei tuotua kohdelistaa</small>'; return; }
+    if (!pfResults.length) runPortfolio(); else { renderPortfolio(); }
+    return;
+  }
+  if (view === 'kohde') {
+    if (!loadPortfolio()) { $('#d-start').hidden = false; $('#d-main').hidden = true; $('#crumb').innerHTML = 'Kohde<small>tuo ensin portfolio</small>'; return; }
+    fillKohdeSelect();
+    const id = h.get('id') || $('#k-sel').value || PF.kohteet[0].id; $('#k-sel').value = id;
+    const r = +(h.get('r') || store.get('sm_kr') || 500); $('#k-radius').value = String(r);
+    const k = PF.kohteet.find(x => x.id === id) || PF.kohteet[0];
+    clearStatus(); $('#crumb').innerHTML = `${esc(k.nimi)}<small>${esc(k.osoite)}, ${esc(k.kunta)} · säde ${rr(r)}</small>`;
+    await runDetail({ ...siteOf(k), kunta: k.kunta_nro }, r, 'kohde');
+    return;
+  }
+  // haku
+  const q = h.get('q'), r = +(h.get('r') || 500);
+  $('#radius').value = String(r);
+  if (!q) { $('#d-start').hidden = false; $('#d-main').hidden = true; $('#crumb').innerHTML = 'Haku<small>syötä osoite</small>'; return; }
+  $('#q').value = q;
+  clearStatus(); status('geo', 'run', 'Osoite');
+  let g; const my = ++detailRun;
+  try { g = await geocode(q); } catch (e) { status('geo', 'err', e.message); $('#d-start').hidden = false; $('#d-main').hidden = true; $('#crumb').innerHTML = 'Haku<small>haku epäonnistui</small>'; return; }
+  if (my !== detailRun) return;
+  status('geo', 'ok', `Osoite (${g.src})${g.alt && g.alt.length ? ' – myös: ' + g.alt.join(', ') : ''}`);
+  $('#crumb').innerHTML = `${esc(g.label)}<small>säde ${rr(r)} · ${esc(g.src)}</small>`;
+  await runDetail({ label: g.label, nimi: '', lat: g.lat, lon: g.lon, kunta: g.kunta }, r, 'haku', my);
+}
+async function runDetail(site, r, mode, my = ++detailRun) {
+  status('local', 'run', 'Hankkeet, kunta, kaavat ja Paavo');
+  try {
+    const R = await analyzeSite(site, r, { force: forceNext, onStep: t => status('local', 'run', 'Haetaan: ' + t) }); forceNext = false;
+    if (my !== detailRun) return;
+    status('local', 'ok', `${R.rows.length} hanketta · ${R.plans.length} kaavaa · ${R.kc.name}`);
+    renderDetail(R, mode);
+    if (mode === 'kohde') { const c = $('#n-kohde'); c.textContent = ''; }
+  } catch (e) { status('local', 'err', e.message); }
+}
+let forceNext = false;
+function fillKohdeSelect() { if ($('#k-sel').options.length === PF.kohteet.length) return; $('#k-sel').innerHTML = [...PF.kohteet].sort((a, b) => (a.kunta + a.nimi).localeCompare(b.kunta + b.nimi, 'fi')).map(k => `<option value="${esc(k.id)}">${esc(k.kunta)} · ${esc(k.nimi)}</option>`).join(''); }
+
+// ======================= Tapahtumat =======================
+document.querySelectorAll('.nav a').forEach(a => a.addEventListener('click', () => { const v = a.dataset.view; if (v === 'kohde') go({ view: 'kohde', id: $('#k-sel').value || (curR && curR.site.id) || undefined }); else if (v === 'haku') go({ view: 'haku', q: $('#q').value || undefined, r: +$('#radius').value }); else go({ view: v }); }));
+window.addEventListener('hashchange', route);
+$('#ctl-haku').addEventListener('submit', e => { e.preventDefault(); const q = $('#q').value.trim(); if (q) go({ view: 'haku', q, r: +$('#radius').value }); });
+$('#radius').addEventListener('change', () => { if ($('#q').value.trim()) go({ view: 'haku', q: $('#q').value.trim(), r: +$('#radius').value }); });
+$('#k-sel').addEventListener('change', () => go({ view: 'kohde', id: $('#k-sel').value, r: +$('#k-radius').value }));
+$('#k-radius').addEventListener('change', () => { store.set('sm_kr', +$('#k-radius').value); go({ view: 'kohde', id: $('#k-sel').value, r: +$('#k-radius').value }); });
+$('#pf-radius').addEventListener('change', () => { store.set('sm_pr', +$('#pf-radius').value); pfResults = []; runPortfolio(); });
+$('#pf-run').addEventListener('click', () => runPortfolio({ force: true }));
+$('#refresh').addEventListener('click', () => { if (curView === 'portfolio') runPortfolio({ force: true }); else { forceNext = true; route(); } });
+document.addEventListener('click', e => { const b = e.target.closest('.ex-btn'); if (b) go({ view: 'haku', q: b.textContent, r: +$('#radius').value }); });
+$('#save').addEventListener('click', () => { const q = $('#q').value.trim(); if (!q) return; const l = (store.get('sm_saved') || []).filter(x => x !== q); l.unshift(q); store.set('sm_saved', l.slice(0, 30)); savedList(); toast('Osoite tallennettu'); });
+function savedList() { $('#saved').innerHTML = (store.get('sm_saved') || []).map(x => `<option value="${esc(x)}">`).join(''); }
+$('#share').addEventListener('click', async () => { try { await navigator.clipboard.writeText(location.href); toast('Linkki kopioitu'); } catch (e) { toast('Kopioi linkki osoiteriviltä'); } });
+$('#about-btn').addEventListener('click', () => { const dd = $('#about-d'); dd.open = true; dd.scrollIntoView({ behavior: 'smooth' }); });
+$('#d-chips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c || !curR) return; c.classList.toggle('on'); drawDetailTable(curR); });
+$('#d-resonly').addEventListener('change', () => { if (curR) { drawDetailTable(curR); drawDetailMap(curR); } });
+$('#d-tbl').addEventListener('click', e => {
+  const th = e.target.closest('th'); if (th && th.dataset.k) { const k = th.dataset.k; if (sortK === k) sortDir *= -1; else { sortK = k; sortDir = ['apts', 'm2'].includes(k) ? -1 : 1; } drawDetailTable(curR); return; }
+  const tr = e.target.closest('tr[data-id]'); if (tr && !e.target.closest('a')) { selId = tr.dataset.id; drawDetailTable(curR); const mk = dMarkers[selId]; if (mk) { dMap.setView(mk.getLatLng(), Math.max(dMap.getZoom(), 16)); mk.openPopup(); } }
 });
-$('#about-btn').addEventListener('click', () => { const d = $('#about').parentElement; d.open = true; d.scrollIntoView({ behavior: 'smooth' }); });
-$('#chips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; c.classList.toggle('on'); drawTable(); });
-$('#resonly').addEventListener('change', () => { drawTable(); drawMap(); });
-$('#tbl').addEventListener('click', e => {
-  const th = e.target.closest('th'); if (th) { const k = th.dataset.k; if (sortK === k) sortDir *= -1; else { sortK = k; sortDir = k === 'apts' || k === 'ka' ? -1 : 1; } drawTable(); return; }
-  const tr = e.target.closest('tr[data-id]'); if (tr) selectRow(tr.dataset.id, true);
+$('#pf-tbl').addEventListener('click', e => { const th = e.target.closest('th'); if (th && th.dataset.k) { pfSort = { k: th.dataset.k, dir: pfSort.k === th.dataset.k ? -pfSort.dir : (['nimi', 'kunta'].includes(th.dataset.k) ? 1 : -1) }; drawPfTable(); return; } const tr = e.target.closest('tr[data-id]'); if (tr) go({ view: 'kohde', id: tr.dataset.id }); });
+$('#ev-days').addEventListener('change', drawEvents);
+$('#d-csv').addEventListener('click', () => curR && dl(`hankkeet_${slug(curR.site.nimi || curR.site.label)}_${curR.r}m.csv`, detailCsv(curR)));
+$('#d-json').addEventListener('click', () => curR && dl(`supply_${slug(curR.site.nimi || curR.site.label)}_${curR.r}m.json`, detailJson(curR), 'application/json'));
+$('#d-print').addEventListener('click', () => { $('#d-attn').open = true; setTimeout(() => window.print(), 100); });
+$('#pf-print').addEventListener('click', () => { $('#pf-attn').open = true; setTimeout(() => window.print(), 100); });
+$('#pf-csv').addEventListener('click', () => dl(`portfolio_${slug(PF && PF.nimi)}_${fmtD(NOW)}.csv`, pfCsv()));
+$('#cal-csv').addEventListener('click', () => dl(`valmistumiskalenteri_${fmtD(NOW)}.csv`, calCsv()));
+// portfolion tuonti
+const dlg = $('#pf-dlg');
+function openPf() { $('#pf-text').value = ''; $('#pf-info').textContent = loadPortfolio() ? `Nyt tallennettu: ${PF.nimi}, ${PF.kohteet.length} kohdetta.` : 'Ei tallennettua portfoliota.'; dlg.showModal(); }
+$('#pf-btn').addEventListener('click', openPf); $('#pf-import2').addEventListener('click', openPf);
+$('#pf-cancel').addEventListener('click', () => dlg.close());
+$('#pf-file').addEventListener('change', async e => { const f = e.target.files[0]; if (f) $('#pf-text').value = await f.text(); });
+$('#pf-ok').addEventListener('click', () => {
+  try { const obj = normPortfolio(JSON.parse($('#pf-text').value)); if (!obj.kohteet.length) throw new Error('Listassa ei ole kohteita'); store.set('sm_portfolio', obj); pfResults = []; dlg.close(); toast(`Portfolio tallennettu: ${obj.kohteet.length} kohdetta`); $('#k-sel').innerHTML = ''; go({ view: 'portfolio' }); }
+  catch (e) { $('#pf-info').textContent = 'Virhe: ' + e.message; }
 });
-$('#csv').addEventListener('click', () => {
-  const rows = filtered(), h = ['tila', 'toimenpide', 'kayttotarkoitus', 'asuntoja', 'kerrosala', 'kerrosluku', 'lupapaatos', 'aloitus', 'valmistunut', 'valmistuminen_arvio', 'toteutumistodennakoisyys', 'etaisyys_m', 'kiinteistotunnus', 'lupatunnus', 'lat', 'lon'];
-  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const body = rows.map(p => [KIND_TXT[p.e.kind], p.laji, p.kaytto, p.apts, p.ka, p.krs, fmtD(p.paatos), fmtD(p.aloitus), fmtD(p.valmis), p.e.kind !== 'done' && p.e.date ? fmtM(p.e.date) : '', p.e.kind === 'permit' ? (p.e.w).toFixed(2) : '', Math.round(p.dist), p.kiint, p.lupa, p.lat, p.lon].map(q).join(';'));
-  const blob = new Blob(['﻿' + [h.join(';'), ...body].join('\n')], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `hankkeet_${(S.label || 'kohde').replace(/[^\wåäö]+/gi, '_')}_${S.r}m.csv`; a.click();
-});
-$('#theme').addEventListener('change', e => { document.documentElement.dataset.theme = e.target.value; store.set('tm_theme', e.target.value); renderAll(); });
+$('#pf-clear').addEventListener('click', () => { store.del('sm_portfolio'); pfResults = []; PF = null; dlg.close(); toast('Portfolio poistettu tästä selaimesta'); go({ view: 'haku' }); });
+// teema + claude
+$('#theme').addEventListener('change', e => { document.documentElement.dataset.theme = e.target.value; store.set('sm_theme', e.target.value); if (curView === 'portfolio' && pfResults.length) renderPortfolio(); else if (curR) renderDetail(curR, curView); });
 $('#ai-open').addEventListener('click', () => $('#ai').classList.add('open'));
 $('#ai-close').addEventListener('click', () => $('#ai').classList.remove('open'));
 $('#ai-cfg').addEventListener('click', () => $('#ai-set').classList.toggle('open'));
-$('#ai-del').addEventListener('click', () => { try { localStorage.removeItem('tm_ai_key'); } catch (e) {} $('#ai-key').value = ''; toast('API-avain poistettu tästä selaimesta'); });
-$('#ai-save').addEventListener('click', () => { store.set('tm_ai_key', $('#ai-key').value.trim()); store.set('tm_ai_model', $('#ai-model').value.trim() || 'claude-sonnet-5-5'); $('#ai-set').classList.remove('open'); toast('Asetukset tallennettu'); });
-$('#presets').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) { $('#ai-in').value = b.dataset.p; askClaude(b.dataset.p); } });
+$('#ai-save').addEventListener('click', () => { store.set('sm_ai_key', $('#ai-key').value.trim()); store.set('sm_ai_model', $('#ai-model').value.trim() || 'claude-sonnet-5-5'); $('#ai-set').classList.remove('open'); toast('Asetukset tallennettu'); });
+$('#ai-del').addEventListener('click', () => { store.del('sm_ai_key'); $('#ai-key').value = ''; toast('API-avain poistettu'); });
+$('#presets').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) askClaude(b.dataset.p); });
 $('#ai-send').addEventListener('click', () => { const q = $('#ai-in').value.trim(); if (q) { askClaude(q); $('#ai-in').value = ''; } });
 $('#ai-in').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('#ai-send').click(); });
-$('#ai-copy').addEventListener('click', async () => {
-  const q = $('#ai-in').value.trim() || 'Tulkitse tämän osoitteen tarjontapaine ja sen vaikutus vuokraukseen.';
-  const txt = `${SYSTEM}\n\nDATA:\n${contextText()}\n\nKYSYMYS: ${q}`;
-  try { await navigator.clipboard.writeText(txt); $('#ai-copy').textContent = 'Kopioitu ✓'; } catch (e) { $('#ai-copy').textContent = 'Kopiointi estetty'; }
-  setTimeout(() => $('#ai-copy').textContent = 'Kopioi Claudelle', 1500);
-});
-
-// ======================= Käynnistys =======================
+$('#ai-copy').addEventListener('click', async () => { const q = $('#ai-in').value.trim() || 'Mihin kohteisiin pitää varautua kilpailevan tarjonnan takia?'; try { await navigator.clipboard.writeText(`${SYSTEM}\n\nDATA:\n${contextText()}\n\nKYSYMYS: ${q}`); toast('Kopioitu – liitä claude.ai:hin'); } catch (e) { toast('Kopiointi estetty'); } });
 window.addEventListener('error', e => status('js', 'err', 'Virhe: ' + (e.message || e)));
 window.addEventListener('unhandledrejection', e => status('js', 'err', 'Virhe: ' + ((e.reason && e.reason.message) || e.reason)));
-window.addEventListener('hashchange', () => { const h = new URLSearchParams(location.hash.slice(1)); const q = h.get('q'), r = +(h.get('r') || 500); if (q && (q !== S.q || r !== S.r)) run(q, r); });
+
+// ======================= Käynnistys =======================
 (function init() {
-  if (!window.L || !window.Chart) {
-    $('#alerts').innerHTML = '<div class="empty">Kartta- ja kaaviokirjastot eivät latautuneet. Avaa tiedosto suoraan selaimessa (Chrome/Safari) – Clauden esikatselu estää ulkoiset haut.</div>';
-    status('lib', 'err', 'Kirjastot eivät latautuneet'); return;
-  }
-  const th = store.get('tm_theme'); if (th) { document.documentElement.dataset.theme = th; $('#theme').value = th; }
-  $('#ai-key').value = store.get('tm_ai_key') || ''; $('#ai-model').value = store.get('tm_ai_model') || 'claude-sonnet-5-5';
-  initMap(); savedList();
-  const h = new URLSearchParams(location.hash.slice(1));
-  const v = store.get('tm_view'); if (v && h.get('q')) setView(v); else setView('projects');
-  if (h.get('q')) { $('#q').value = h.get('q'); if (h.get('r')) $('#radius').value = h.get('r'); run(h.get('q'), +$('#radius').value); }
+  if (!window.L || !window.Chart) { $('#status').innerHTML = '<span class="err">✕ Kartta- ja kaaviokirjastot eivät latautuneet. Avaa sivu selaimessa – Clauden esikatselu estää ulkoiset haut.</span>'; return; }
+  const th = store.get('sm_theme'); if (th) { document.documentElement.dataset.theme = th; $('#theme').value = th; }
+  $('#ai-key').value = store.get('sm_ai_key') || ''; $('#ai-model').value = store.get('sm_ai_model') || 'claude-sonnet-5-5';
+  const pr = store.get('sm_pr'); if (pr) $('#pf-radius').value = String(pr);
+  // v1-yhteensopivuus: vanhat #q=…-linkit
+  savedList(); route();
 })();
 </script>
 </body>
