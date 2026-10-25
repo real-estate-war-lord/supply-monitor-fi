@@ -973,6 +973,11 @@ function dedupeProjects(results, pred) {
   results.forEach(R => R.rows.forEach(p => { if (!pred(p)) return; (m[p.id] = m[p.id] || { p, sites: [] }).sites.push({ R, dist: p.dist }); }));
   return Object.values(m).map(x => (x.sites.sort((a, b) => a.dist - b.dist), x));
 }
+function groupProjects(list) {
+  const grp = {};
+  list.forEach(x => { const p = x.p, k = (p.kiint || p.id) + '|' + p.e.kind + '|' + (p.e.date ? p.e.date.getFullYear() * 12 + p.e.date.getMonth() : ''); if (!grp[k]) grp[k] = { p: Object.assign({}, p, { apts: 0, ha: 0 }), sites: x.sites, n: 0, ids: [] }; const G = grp[k]; G.p.apts += p.apts; G.p.ha += (p.ha || 0); G.n++; G.ids.push(p.id); G.p.m2 = G.p.apts && G.p.ha ? G.p.ha / G.p.apts : null; if (!G.p.addr && p.addr) G.p.addr = p.addr; x.sites.forEach(s => { if (!G.sites.some(t => t.R === s.R)) G.sites.push(s); }); });
+  return Object.values(grp);
+}
 function dedupeEvents(results, days) {
   const m = {}, since = addD(NOW, -days);
   results.forEach(R => R.events.forEach(e => { if (e.date < since) return; const k = e.p.id + e.type; (m[k] = m[k] || { e, sites: [] }).sites.push(R.site.nimi); }));
@@ -1020,7 +1025,7 @@ function drawCalendar(ok) {
     { label: 'Luvitettu, painotettu', data: months.map(m => Math.round((byM[key(m)] || []).filter(x => x.p.e.kind === 'permit').reduce((s, x) => s + x.p.apts * x.p.e.w, 0))), backgroundColor: css('--st-permit'), stack: 's' }] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: legendOpt, tooltip: tipOpt }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true } } } });
   $('#cal-tbl thead').innerHTML = '<tr><th>Kuukausi</th><th>Hanke</th><th class="num">Asuntoja</th><th class="num">m²/as</th><th>Tila</th><th>Lähimmät kohteet</th></tr>';
-  const rows = []; months.forEach(m => { const grp = {}; (byM[key(m)] || []).forEach(x => { const g = (x.p.kiint || x.p.id) + '|' + x.p.e.kind; if (!grp[g]) grp[g] = { p: Object.assign(Object.create(Object.getPrototypeOf(x.p)), x.p, { apts: 0, ha: 0, e: x.p.e }), sites: x.sites, n: 0 }; const G = grp[g]; G.p.apts += x.p.apts; G.p.ha += (x.p.ha || 0); G.n++; G.p.m2 = G.p.apts && G.p.ha ? G.p.ha / G.p.apts : null; if (!G.p.addr && x.p.addr) G.p.addr = x.p.addr; }); Object.values(grp).sort((a, b) => b.p.apts - a.p.apts).forEach(x => rows.push({ m, x })); });
+  const rows = []; months.forEach(m => groupProjects(byM[key(m)] || []).sort((a, b) => b.p.apts - a.p.apts).forEach(x => rows.push({ m, x })));
   $('#cal-tbl tbody').innerHTML = rows.length ? rows.map(({ m, x }) => { const p = x.p, six = p.e.date < addM(NOW, 6); return `<tr><td>${six ? '<b style="color:var(--bad)">' : ''}${m.getMonth() + 1}/${m.getFullYear()}${six ? '</b>' : ''}</td><td class="wrap">${p.addr ? esc(p.addr) : esc(p.kaytto)}<br><span class="est">${esc(p.kaytto)}${x.n > 1 ? ' · ' + x.n + ' rakennusta' : ''} · kiint. ${esc(p.kiint || '')}</span></td><td class="num">${n0(p.apts)}</td><td class="num">${p.m2 ? n0(p.m2) : '–'}</td><td>${p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu ' + pct(p.e.w)}</td><td class="wrap">${x.sites.map(s => `<a href="#view=kohde&id=${encodeURIComponent(s.R.site.id)}">${esc(s.R.site.nimi)}</a> ${n0(s.dist)} m${s.R.site.m2 && p.m2 && Math.abs(p.m2 - s.R.site.m2) <= SIZE_TOL ? ' <span class="pill warn">koko</span>' : ''}`).join(', ')}</td></tr>`; }).join('') : '<tr><td colspan="6" class="empty">Ei tunnettuja valmistumisia 24 kk sisällä.</td></tr>';
 }
 function drawEvents() {
@@ -1049,7 +1054,7 @@ function pfCsv() {
 function calCsv() {
   const { proj } = calendarData(pfResults.filter(R => !R.error));
   const h = ['arvioitu_valmistuminen', 'tila', 'toteutumistod', 'osoite', 'kayttotarkoitus', 'asuntoja', 'm2_per_asunto', 'kiinteistotunnus', 'lahimmat_kohteet'];
-  return [h.join(';'), ...proj.sort((a, b) => a.p.e.date - b.p.e.date).map(x => [fmtM(x.p.e.date), KIND_TXT[x.p.e.kind], x.p.e.w.toFixed(2), x.p.addr, x.p.kaytto, x.p.apts, x.p.m2 ? x.p.m2.toFixed(1) : '', x.p.kiint, x.sites.map(s => `${s.R.site.nimi} (${Math.round(s.dist)} m)`).join(' | ')].map(csvQ).join(';'))].join('\n');
+  return [h.join(';'), ...groupProjects(proj).sort((a, b) => a.p.e.date - b.p.e.date).map(x => [fmtM(x.p.e.date), KIND_TXT[x.p.e.kind], x.p.e.w.toFixed(2), x.p.addr, x.p.kaytto, x.p.apts, x.p.m2 ? x.p.m2.toFixed(1) : '', x.p.kiint, x.sites.map(s => `${s.R.site.nimi} (${Math.round(s.dist)} m)`).join(' | ')].map(csvQ).join(';'))].join('\n');
 }
 
 // ======================= Automaatiorajapinta (Claude-ajastus) =======================
@@ -1057,12 +1062,12 @@ function calCsv() {
 function digest({ days = 7 } = {}) {
   const ok = pfResults.filter(R => !R.error), L = [];
   L.push(`SUPPLY MONITOR ${fmtD(NOW)} · ${PF ? PF.nimi : ''} · ${ok.length} kohdetta · säde ${rr(+$('#pf-radius').value)}`);
-  const soon = dedupeProjects(ok, p => active(p) && p.e.date && p.e.date < addM(NOW, 6)).sort((a, b) => a.p.e.date - b.p.e.date);
-  L.push(`VALMISTUU ALLE 6 KK (${soon.length}):`);
-  soon.forEach(x => L.push(`- ~${fmtM(x.p.e.date)} | ${x.p.apts} as | ${x.p.m2 ? Math.round(x.p.m2) + ' m2/as' : '-'} | ${x.p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu'} | ${x.p.addr || x.p.kaytto} | kiint ${x.p.kiint} | id ${x.p.id} | kohteet: ${x.sites.map(s => `${s.R.site.nimi} ${Math.round(s.dist)}m${s.R.site.m2 && x.p.m2 && Math.abs(x.p.m2 - s.R.site.m2) <= SIZE_TOL ? ' KOKO-OSUMA' : ''}`).join('; ')}`));
+  const soon = groupProjects(dedupeProjects(ok, p => active(p) && p.e.date && p.e.date < addM(NOW, 6))).sort((a, b) => a.p.e.date - b.p.e.date || b.p.apts - a.p.apts);
+  L.push(`VALMISTUU ALLE 6 KK (${soon.length} kiinteistöä, ${Math.round(soon.reduce((s, x) => s + x.p.apts * x.p.e.w, 0))} as):`);
+  soon.forEach(x => L.push(`- ~${fmtM(x.p.e.date)} | ${x.p.apts} as${x.n > 1 ? ' (' + x.n + ' rak.)' : ''} | ${x.p.kaytto} | ${x.p.m2 ? Math.round(x.p.m2) + ' m2/as' : '-'} | ${x.p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu'} | ${x.p.addr || '-'} | kiint ${x.p.kiint} | kohteet: ${x.sites.map(s => `${s.R.site.nimi} ${Math.round(s.dist)}m${s.R.site.m2 && x.p.m2 && Math.abs(x.p.m2 - s.R.site.m2) <= SIZE_TOL ? ' KOKO-OSUMA' : ''}`).join('; ')}`));
   const ev = dedupeEvents(ok, days);
   L.push(`MUUTOKSET ${days} PV (${ev.length}):`);
-  ev.forEach(x => L.push(`- ${fmtD(x.e.date)} | ${x.e.type} | ${x.e.p.apts} as | ${x.e.p.addr || x.e.p.kaytto} | id ${x.e.p.id} | kohteet: ${x.sites.join('; ')}`));
+  ev.forEach(x => L.push(`- ${fmtD(x.e.date)} | ${x.e.type} | ${x.e.p.apts} as | ${x.e.p.kaytto} | ${x.e.p.addr || '-'} | kiint ${x.e.p.kiint} | kohteet: ${x.sites.join('; ')}`));
   L.push('RISKI (top 10):');
   [...ok].sort((a, b) => b.risk - a.risk).slice(0, 10).forEach(R => L.push(`- ${R.site.nimi} | ${R.risk} p | suhde ${R.ratio == null ? '-' : R.ratio.toFixed(1)}${R.demandWeak ? ' (kysyntä ei kasva)' : ''} | tarjonta ${pct(R.supplyRate)}/v kysyntä ${pct(R.demandRate)}/v | 6kk ${Math.round(R.n6)} 24kk ${Math.round(R.n24)} | koko-osuma ${R.matchShare == null ? '-' : pct(R.matchShare)} | kaavat ${R.plans.length}`));
   const addrs = [...new Set(dedupeProjects(ok, p => active(p) && p.addr).map(x => x.p.addr))];
