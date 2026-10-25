@@ -225,7 +225,7 @@ dialog .df{padding:12px 16px;border-top:1px solid var(--line2);display:flex;gap:
       </select>
       <button class="side-btn" id="refresh" title="Ohita välimuisti ja hae kaikki data uudelleen">↻ Päivitä data</button>
       <button class="side-btn" id="about-btn">ⓘ Lähteet ja menetelmä</button>
-      <div class="build">v2.1 · 25.10.2026 · data haetaan ajon aikana</div>
+      <div class="build">v2.2 · 25.10.2026 · data haetaan ajon aikana</div>
     </div>
   </aside>
 
@@ -423,7 +423,7 @@ const RYHTI_PERMIT = 'https://paikkatiedot.ymparisto.fi/geoserver/ryhti_permit/o
 const RYHTI_PLAN = 'https://paikkatiedot.ymparisto.fi/geoserver/ryhti_plan/ogc/features/v1/collections/';
 const PX = 'https://pxdata.stat.fi/PxWeb/api/v1/fi/StatFin/';
 const PAAVO = 'https://geo.stat.fi/geoserver/postialue/wfs';
-const HIST_FROM = 2015, STALE_MONTHS = 48, SIZE_TOL = 12;
+const HIST_FROM = 2015, STALE_MONTHS = 48, SIZE_TOL = 12, UNREC_MONTHS = 12;
 const NEW = 'Uusi rakennus tai rakennelma', EXT = 'Laajentaminen';
 const RES_TYPES = ['Kerrostalo', 'Pientalo'];
 const NOW = new Date(), NOW_Y = NOW.getFullYear();
@@ -565,7 +565,7 @@ function kuntaCtx(code, force) {
     let rows = !force && cacheGet('sm_c_kunta_' + code, TTL.kunta);
     if (rows) rows = rows.map(unpackK);
     else { rows = (await ryhti('avoimet_lupa_rakennukset', `kuntanumero='${code}' AND ${PROJ_FILTER}`, { limit: 3000 })).map(norm); cacheSet('sm_c_kunta_' + code, rows.map(packK)); }
-    const A = assumptions(rows); rows.forEach(p => p.e = expected(p, A));
+    const A = assumptions(rows); rows.forEach(p => p.e = expected(p, A)); markUnrec(rows);
     let D = !force && cacheGet('sm_c_px_' + code, TTL.px);
     if (!D) { try { D = await demandData(code); cacheSet('sm_c_px_' + code, D); } catch (e) { D = null; } }
     const M = D ? demandStats(D) : null, K = kuntaStats(rows, A);
@@ -604,14 +604,32 @@ function expected(p, A) {
   const a = A[p.kaytto === 'Kerrostalo' ? 'Kerrostalo' : 'Pientalo'];
   if (p.tila === 'Rauennut') return { kind: 'lapsed', w: 0, date: null };
   if (p.valmis || p.tila === 'Valmistunut') return { kind: 'done', w: 1, date: p.valmis };
-  if (p.aloitus || p.tila === 'Aloitettu') { let dt = p.aloitus ? addM(p.aloitus, a.build) : addM(NOW, a.build / 2), late = false; if (dt < NOW) { dt = addM(NOW, 3); late = true; } return { kind: 'uc', w: 1, date: dt, late }; }
+  if (p.aloitus || p.tila === 'Aloitettu') {
+    let dt = p.aloitus ? addM(p.aloitus, a.build) : addM(NOW, a.build / 2), late = false;
+    if (dt < NOW) {
+      // Ryhti: valmistumista ei aina kirjata. Yli 12 kk yli arvion → todennäköisesti valmis tai keskeytynyt, ei tarjontaa.
+      if (monthsBetween(dt, NOW) > UNREC_MONTHS) return { kind: 'uc', w: 0, date: null, late: true, unrec: true, due: dt };
+      dt = addM(NOW, 3); late = true;
+    }
+    return { kind: 'uc', w: 1, date: dt, late };
+  }
   const stale = (p.paatos ? monthsBetween(p.paatos, NOW) : 0) > STALE_MONTHS && !(p.jatko && p.jatko > NOW);
   if (stale) return { kind: 'permit', w: 0, date: null, stale: true };
   const start = new Date(Math.max(p.paatos ? addM(p.paatos, a.lag) : NOW, addM(NOW, 1)));
   return { kind: 'permit', w: a.real, date: addM(start, a.build) };
 }
+// Saman kiinteistön rinnakkaislupa (päätös ±120 pv) on valmistunut, mutta tämä on yhä "Aloitettu" yli arvion → valmistuminen kirjaamatta.
+function markUnrec(rows) {
+  const done = rows.filter(q => q.laji === NEW && q.valmis && q.kiint);
+  for (const p of rows) {
+    if (!p.e || p.e.kind !== 'uc' || !p.e.late || p.e.unrec || !p.kiint) continue;
+    const sib = done.find(q => q.kiint === p.kiint && q.id !== p.id && p.paatos && q.paatos && Math.abs(q.paatos - p.paatos) < 120 * 864e5);
+    if (sib) p.e = { kind: 'uc', w: 0, date: null, late: true, unrec: true, sib: sib.valmis };
+  }
+  return rows;
+}
 const supplyOK = p => p.laji === NEW && isRes(p.kaytto) && p.apts > 0;
-const active = p => supplyOK(p) && p.e && (p.e.kind === 'uc' || (p.e.kind === 'permit' && !p.e.stale));
+const active = p => supplyOK(p) && p.e && ((p.e.kind === 'uc' && !p.e.unrec) || (p.e.kind === 'permit' && !p.e.stale));
 function timeline(rows) {
   const t = { done: {}, uc: {}, permit: {} }; YEARS.forEach(y => { t.done[y] = 0; t.uc[y] = 0; t.permit[y] = 0; });
   for (const p of rows) { if (!supplyOK(p) || !p.e || !p.e.date || !p.e.w) continue; const y = p.e.date.getFullYear(); if (t[p.e.kind] && y in t[p.e.kind]) t[p.e.kind][y] += p.apts * p.e.w; }
@@ -620,7 +638,7 @@ function timeline(rows) {
 function sumWindow(rows, fromM, toM) { const a = addM(NOW, fromM), b = addM(NOW, toM); let s = 0; for (const p of rows) if (supplyOK(p) && p.e && p.e.date && p.e.w && p.e.kind !== 'done' && p.e.date >= a && p.e.date < b) s += p.apts * p.e.w; return s; }
 function kuntaStats(rows, A) {
   const t = timeline(rows), last5 = []; for (let y = NOW_Y - 5; y < NOW_Y; y++) last5.push(t.done[y] || 0);
-  return { t, avg5: last5.reduce((a, b) => a + b, 0) / 5, uc: rows.filter(p => supplyOK(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0), permW: rows.filter(p => supplyOK(p) && p.e.kind === 'permit').reduce((s, p) => s + p.apts * p.e.w, 0), next3: sumWindow(rows, 0, 36) / 3 };
+  return { t, avg5: last5.reduce((a, b) => a + b, 0) / 5, uc: rows.filter(p => active(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0), permW: rows.filter(p => supplyOK(p) && p.e.kind === 'permit').reduce((s, p) => s + p.apts * p.e.w, 0), next3: sumWindow(rows, 0, 36) / 3 };
 }
 
 // ======================= Paavo (paikallinen kysyntä) =======================
@@ -698,7 +716,7 @@ async function analyzeSite(site, r, { force = false, onStep } = {}) {
   if (!kunta) throw new Error('Kuntaa ei tunnistettu');
   step('kunta');
   const [kc, pv, plansAll] = await Promise.all([kuntaCtx(kunta, force), paavo(site.lat, site.lon).catch(() => null), plansFor(kunta, force).catch(() => [])]);
-  const rows = local.rows.map(p => Object.assign(p, { dist: haversine(site.lat, site.lon, p.lat, p.lon), e: expected(p, kc.A), addr: local.addr[p.id] || '' }));
+  const rows = markUnrec(local.rows.map(p => Object.assign(p, { dist: haversine(site.lat, site.lon, p.lat, p.lon), e: expected(p, kc.A), addr: local.addr[p.id] || '' })));
   const plans = plansAll.map(p => ({ ...p, dist: haversine(site.lat, site.lon, p.lat, p.lon) })).filter(p => p.dist - (p.rad || 0) <= r).sort((a, b) => a.dist - b.dist);
   return derive({ site, r, rows, stock, kunta, kc, pv, plans });
 }
@@ -723,9 +741,9 @@ function derive(R) {
   const risk = Math.round(s1 + s2 + s3 + s4);
   const level = risk >= 60 ? 'bad' : risk >= 35 ? 'warn' : 'good';
   const soon6 = rows.filter(p => active(p) && p.e.date && p.e.date < addM(NOW, 6)).sort((a, b) => a.e.date - b.e.date);
-  const stale = rows.filter(p => supplyOK(p) && p.e.stale);
-  Object.assign(R, { n6, n24, n36, supplyRate, demandRate, demandWeak, kuntaRate, ratio, ratioK, matchShare, matchApts, risk, riskParts: [s1, s2, s3, s4].map(Math.round), level, soon6, stale,
-    uc: rows.filter(p => supplyOK(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0),
+  const stale = rows.filter(p => supplyOK(p) && p.e.stale), unrec = rows.filter(p => supplyOK(p) && p.e.unrec);
+  Object.assign(R, { unrec, n6, n24, n36, supplyRate, demandRate, demandWeak, kuntaRate, ratio, ratioK, matchShare, matchApts, risk, riskParts: [s1, s2, s3, s4].map(Math.round), level, soon6, stale,
+    uc: rows.filter(p => active(p) && p.e.kind === 'uc').reduce((s, p) => s + p.apts, 0),
     permitRaw: rows.filter(p => active(p) && p.e.kind === 'permit').reduce((s, p) => s + p.apts, 0) });
   R.events = eventsFor(R, 90);
   return R;
@@ -770,6 +788,7 @@ function alertsFor(R, ctx = 'site') {
   const big = R.rows.filter(p => active(p) && p.apts >= 100);
   if (big.length && ctx === 'site') out.push({ lvl: 'warn', t: `${big.length} suurhanketta (≥ 100 as.) tulossa`, d: big.sort((a, b) => b.apts - a.apts).slice(0, 4).map(p => `${n0(p.apts)} as. · ${p.e.kind === 'uc' ? 'rakenteilla' : 'luvitettu'} · ~${fmtM(p.e.date)} · ${n0(p.dist)} m`).join('<br>') });
   if (R.plans.length && ctx === 'site') out.push({ lvl: 'info', t: `${R.plans.length} kaavaa vireillä säteellä`, d: R.plans.slice(0, 3).map(p => `${esc(p.name)} · ${esc(p.stage || '')}`).join('<br>') });
+  if (R.unrec && R.unrec.length && ctx === 'site') out.push({ lvl: 'info', t: `${R.unrec.length} hanketta: valmistuminen puuttuu Ryhdistä (${R.unrec.reduce((s, p) => s + p.apts, 0)} as.)`, d: 'Aloitettu, mutta yli 12 kk yli kunnan tyypillisen rakennusajan tai saman tontin rinnakkaisrakennus on jo valmistunut. Todennäköisesti valmis tai keskeytynyt, joten näitä ei lasketa tulevaan tarjontaan.' });
   if (R.stale.length && ctx === 'site') out.push({ lvl: 'info', t: `${R.stale.length} vanhaa aloittamatonta lupaa`, d: 'Lupa on yli 4 v vanha, eikä aloitusta ole kirjattu, joten näitä ei lasketa ennusteeseen.' });
   const order = { bad: 0, warn: 1, info: 2, good: 3 };
   return out.sort((a, b) => order[a.lvl] - order[b.lvl]);
@@ -791,7 +810,7 @@ let dMap, pfMap; const dMarkers = {};
 const KIND_COLOR = k => css({ uc: '--st-uc', permit: '--st-permit', done: '--st-done', lapsed: '--st-lapsed' }[k] || '--st-other');
 const KIND_TXT = { uc: 'Rakenteilla', permit: 'Luvitettu', done: 'Valmistunut', lapsed: 'Rauennut' };
 function popupHtml(p, R) {
-  const e = p.e, when = e.kind === 'done' ? `Valmistui ${fmtD(p.valmis)}` : e.stale ? 'Lupa yli 4 v vanha – epävarma' : e.date ? `Arvio ~${fmtM(e.date)}${e.late ? ' (myöhässä)' : ''}${e.kind === 'permit' ? ` · toteutumistod. ${pct(e.w)}` : ''}` : '';
+  const e = p.e, when = e.kind === 'done' ? `Valmistui ${fmtD(p.valmis)}` : e.unrec ? (e.sib ? `Valmistuminen kirjaamatta – tontin rinnakkaisrakennus valmistui ${fmtD(e.sib)}` : `Valmistuminen kirjaamatta – arvio ~${fmtM(e.due)} ylittyi yli 12 kk`) : e.stale ? 'Lupa yli 4 v vanha – epävarma' : e.date ? `Arvio ~${fmtM(e.date)}${e.late ? ' (myöhässä)' : ''}${e.kind === 'permit' ? ` · toteutumistod. ${pct(e.w)}` : ''}` : '';
   return `<b>${esc(p.kaytto)}</b> · ${KIND_TXT[e.kind]}${p.addr ? '<br>' + esc(p.addr) : ''}<br>${p.apts ? `<b>${n0(p.apts)}</b> as. · ` : ''}${p.m2 ? n0(p.m2) + ' m²/as · ' : ''}${p.ka ? n0(p.ka) + ' k-m²' : ''}<br>Lupa ${fmtD(p.paatos) || '–'}${p.aloitus ? ' · aloitus ' + fmtD(p.aloitus) : ''}<br>${when}<br><span style="color:${css('--muted')}">kiint. ${esc(p.kiint || '–')} · ${n0(p.dist)} m</span>`;
 }
 function drawDetailMap(R) {
@@ -803,7 +822,7 @@ function drawDetailMap(R) {
   [...R.rows].sort((a, b) => b.apts - a.apts).forEach(p => {
     if (resOnly && !isRes(p.kaytto)) return;
     const col = KIND_COLOR(p.e.kind), rad = p.apts > 0 ? Math.max(5, Math.min(22, 3 + Math.sqrt(p.apts) * 1.4)) : 4;
-    const mk = L.circleMarker([p.lat, p.lon], { radius: rad, color: col, weight: p.laji === NEW ? 1.5 : 1, fillColor: col, fillOpacity: p.e.kind === 'done' || p.e.kind === 'lapsed' ? .35 : .75, dashArray: p.e.stale ? '3 3' : null }).addTo(g).bindPopup(popupHtml(p, R));
+    const mk = L.circleMarker([p.lat, p.lon], { radius: rad, color: col, weight: p.laji === NEW ? 1.5 : 1, fillColor: col, fillOpacity: p.e.kind === 'done' || p.e.kind === 'lapsed' ? .35 : .75, dashArray: p.e.stale || p.e.unrec ? '3 3' : null }).addTo(g).bindPopup(popupHtml(p, R));
     mk.on('click', () => { selId = p.id; drawDetailTable(R); }); dMarkers[p.id] = mk;
   });
   L.circleMarker([R.site.lat, R.site.lon], { radius: 7, color: css('--panel'), weight: 2, fillColor: css('--ink'), fillOpacity: 1 }).addTo(g).bindTooltip(esc(R.site.nimi || R.site.label));
@@ -901,7 +920,7 @@ function drawDetailTable(R) {
   else { const c = DCOLS.find(c => c.k === sortK); rows.sort((a, b) => { const x = c.v(a), y = c.v(b); return (x > y ? 1 : x < y ? -1 : 0) * sortDir; }); }
   $('#d-tbl thead').innerHTML = '<tr>' + DCOLS.filter(c => c.k !== 'osuma' || R.site.m2).map(c => `<th class="${c.num ? 'num' : ''}" data-k="${c.k}">${c.t}${sortK === c.k ? (sortDir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('') + '<th></th></tr>';
   $('#d-tbl tbody').innerHTML = rows.length ? rows.map(p => {
-    const e = p.e, valm = e.kind === 'done' ? fmtD(p.valmis) : e.stale ? '<span class="est">epävarma</span>' : e.date ? `<span class="est">~${fmtM(e.date)}</span>${e.late ? '<span class="flag">myöhässä</span>' : ''}${e.date < addM(NOW, 6) ? '<span class="flag" style="color:var(--bad)">≤ 6 kk</span>' : ''}` : '–';
+    const e = p.e, valm = e.kind === 'done' ? fmtD(p.valmis) : e.unrec ? `<span class="est">${e.sib ? '~' + fmtM(e.sib) : '–'}</span><span class="flag">kirjaamatta?</span>` : e.stale ? '<span class="est">epävarma</span>' : e.date ? `<span class="est">~${fmtM(e.date)}</span>${e.late ? '<span class="flag">myöhässä</span>' : ''}${e.date < addM(NOW, 6) ? '<span class="flag" style="color:var(--bad)">≤ 6 kk</span>' : ''}` : '–';
     const match = p.m2 && R.site.m2 ? (Math.abs(p.m2 - R.site.m2) <= SIZE_TOL ? '<span class="pill warn">osuma</span>' : '<span class="est">eri</span>') : '';
     const oik = p.addr && active(p) ? `<a href="https://www.google.com/search?q=${encodeURIComponent('"' + p.addr.split(',')[0] + '" vuokra-asunnot')}" target="_blank" rel="noopener" title="Etsi vuokrailmoituksia osoitteella">vuokrailm.</a>` : '';
     return `<tr class="click${selId === p.id ? ' sel' : ''}" data-id="${esc(p.id)}"><td><span class="tag"><i style="background:${KIND_COLOR(e.kind)}"></i>${KIND_TXT[e.kind]}</span>${e.kind === 'permit' && !e.stale ? `<span class="flag" style="color:var(--muted)">${pct(e.w)}</span>` : ''}</td>
@@ -1079,7 +1098,7 @@ window.SupplyMonitor = {
   async runPortfolio(o = {}) { if (!loadPortfolio()) return { ok: false, error: 'Portfolio puuttuu tästä selaimesta' }; await runPortfolio(o); while (pfPromise && pfResults.length === 0) await pfPromise; lastDigest = digest(o); return { ok: true, length: lastDigest.length, chunks: Math.ceil(lastDigest.length / 800) }; },
   chunk(i, size = 800) { return lastDigest.slice(i * size, (i + 1) * size); },
   digest: o => (lastDigest = digest(o)),
-  results: () => pfResults, current: () => curR, version: '2.1'
+  results: () => pfResults, current: () => curR, version: '2.2'
 };
 
 // ======================= Claude =======================
@@ -1094,7 +1113,7 @@ function contextText() {
     `VALMISTUU: alle 6 kk ${Math.round(R.n6)} as., 24 kk ${Math.round(R.n24)} as. Koko-osuma ${R.matchShare == null ? '-' : pct(R.matchShare)}.`,
     `KAAVAT VIREILLÄ: ${R.plans.map(p => p.name + ' (' + (p.stage || '') + ')').join('; ') || 'ei'}`,
     'HANKKEET: tila | käyttö | osoite | as | m2/as | lupa | aloitus | valmistuminen | etäisyys',
-    ...act.map(p => `${KIND_TXT[p.e.kind]}${p.e.stale ? ' (vanha lupa)' : ''} | ${p.kaytto} | ${p.addr || '-'} | ${p.apts} | ${p.m2 ? Math.round(p.m2) : '-'} | ${fmtD(p.paatos)} | ${fmtD(p.aloitus)} | ${p.e.kind === 'done' ? fmtD(p.valmis) : p.e.date ? '~' + fmtM(p.e.date) : '-'} | ${Math.round(p.dist)} m`),
+    ...act.map(p => `${KIND_TXT[p.e.kind]}${p.e.stale ? ' (vanha lupa)' : ''}${p.e.unrec ? ' (valmistuminen kirjaamatta)' : ''} | ${p.kaytto} | ${p.addr || '-'} | ${p.apts} | ${p.m2 ? Math.round(p.m2) : '-'} | ${fmtD(p.paatos)} | ${fmtD(p.aloitus)} | ${p.e.kind === 'done' ? fmtD(p.valmis) : p.e.date ? '~' + fmtM(p.e.date) : '-'} | ${Math.round(p.dist)} m`),
     'LÄHTEET: Ryhti (Syke), Tilastokeskus (Paavo, 14wx, 15fd), kuntien kaavarajapinnat. Valmistumisajat ovat malliarvioita.'].join('\n');
 }
 const SYSTEM = 'Olet kiinteistösijoittajan (vuokra-asuntosalkku) analyytikko Suomessa. Vastaat suomeksi, tiiviisti ja konkreettisesti. Käytä vain annettua dataa ja kerro, kun jokin on arvio. Älä keksi hankkeiden nimiä tai rakennuttajia. Muotoile lyhyinä kappaleina tai ranskalaisin viivoin.';

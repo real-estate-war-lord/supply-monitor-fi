@@ -60,6 +60,7 @@ Lähdemerkinnät:
 
 - **Tarjonta** = uudisrakennus, käyttötarkoitus kerrostalo tai pientalo, huoneistoja > 0.
 - **Valmistumisarvio** perustuu kunnan omaan Ryhti-historiaan (mediaaniviive, mediaanirakennusaika ja toteutumisaste). Yli 48 kk vanhat aloittamattomat luvat ovat epävarmoja, eikä niitä lasketa mukaan.
+- **Valmistuminen kirjaamatta:** Ryhtiin ei aina kirjata valmistumista. Aloitettua hanketta ei lasketa tulevaan tarjontaan, jos kunnan mediaanirakennusajalla laskettu arvio on ylittynyt yli 12 kk tai jos saman kiinteistön rinnakkaislupa (päätös ±120 pv) on jo valmistunut. Hanke näkyy listassa merkinnällä "kirjaamatta?".
 - **Paikallinen tarjonta vs. kysyntä** = (seuraavan 36 kk valmistumiset / 3 / nykyinen kanta säteellä) jaettuna postinumeroalueen talouksien vuosikasvulla 2019→2024. Kysynnän alaraja on 0,5 %/v, ja ↓-merkintä tarkoittaa, ettei paikallinen kysyntä kasva.
 - **Imeytyminen** = talouksien lisäys / asuntojen lisäys postinumeroalueella 2019→2024. Jos imeytyminen on alle 60 %, alue ei ole niellyt edellistä tarjontaa, ja paineen pisteitä korotetaan.
 - **Riskipisteet 0–100** = paine 40 + 24 kk tarjonta suhteessa kohteen asuntoihin 25 + asuntokokojen osuma (±12 m²) 20 + alle 6 kk päähän valmistuvat 15.
@@ -67,7 +68,7 @@ Lähdemerkinnät:
 
 ## Rajoitteet
 
-- Ryhdin kattavuus riippuu kuntien tiedonsiirrosta.
+- Ryhdin kattavuus riippuu kuntien tiedonsiirrosta. Lupa- ja aloitustiedot päivittyvät hyvin, mutta valmistumisia jää kirjaamatta.
 - Data ei kerro, onko kohde vuokra- vai omistusasuntokohde.
 - Paavo kuvaa mennyttä kehitystä postinumerotasolla. Uusilla alueilla talouksien kasvu johtuu itse uudesta tarjonnasta, joten lue kasvua yhdessä imeytymisen kanssa.
 
