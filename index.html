@@ -1234,8 +1234,22 @@ window.addEventListener('unhandledrejection', e => status('js', 'err', 'Virhe: '
   $('#ai-key').value = store.get('sm_ai_key') || ''; $('#ai-model').value = store.get('sm_ai_model') || 'claude-sonnet-5-5';
   const pr = store.get('sm_pr'); if (pr) $('#pf-radius').value = String(pr);
   // v1-yhteensopivuus: vanhat #q=…-linkit
-  savedList(); route();
+  savedList();
+  importFromHash().then(route);
 })();
+// Tuontilinkki: #import=<deflate-raw + base64url JSON>. #-osa ei lähde palvelimelle.
+async function importFromHash() {
+  const m = location.hash.match(/import=([A-Za-z0-9_-]+)/); if (!m) return;
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/'), bin = atob(b64 + '='.repeat((4 - b64.length % 4) % 4));
+    const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    const txt = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    const obj = normPortfolio(JSON.parse(txt)); if (!obj.kohteet.length) throw new Error('tyhjä lista');
+    store.set('sm_portfolio', obj); pfResults = [];
+    history.replaceState(null, '', location.pathname + '#view=portfolio');
+    toast(`Portfolio tuotu: ${obj.kohteet.length} kohdetta`);
+  } catch (e) { history.replaceState(null, '', location.pathname + '#view=portfolio'); toast('Tuontilinkki ei kelpaa: ' + e.message); }
+}
 </script>
 </body>
 </html>
